@@ -7,7 +7,7 @@ from app.models.schemas import PipelineStateResponse, StageState, StageFinding
 from app.data.fixtures import build_stages
 from app.state import active_scenarios
 
-router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
+router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
 
 @router.get("/state", response_model=PipelineStateResponse)

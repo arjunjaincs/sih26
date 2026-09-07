@@ -10,7 +10,7 @@ from app.models.schemas import (
 from app.data.fixtures import build_stages
 from app.state import active_scenarios
 
-router = APIRouter(prefix="/api/report", tags=["report"])
+router = APIRouter(prefix="/report", tags=["report"])
 
 RISK_ORDER = [RiskLevel.CLEAN, RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL]
 

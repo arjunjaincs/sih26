@@ -11,7 +11,7 @@ from app.models.schemas import (
 )
 from app.state import active_scenarios
 
-router = APIRouter(prefix="/api/audit", tags=["audit"])
+router = APIRouter(prefix="/audit", tags=["audit"])
 
 
 def _hash_block(prev_hash: str, index: int, action: str, stage: str) -> str:

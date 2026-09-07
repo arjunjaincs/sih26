@@ -6,7 +6,7 @@ from app.models.schemas import AttackScenario, TriggerResponse, ResetResponse
 from app.data.fixtures import SCENARIO_PATCHES
 from app.state import active_scenarios
 
-router = APIRouter(prefix="/api/demo", tags=["demo"])
+router = APIRouter(prefix="/demo", tags=["demo"])
 
 # Map each scenario to the human-readable stage names it affects
 _STAGE_NAMES = {

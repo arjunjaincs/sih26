@@ -33,7 +33,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(pipeline.router)
-app.include_router(demo.router)
-app.include_router(report.router)
-app.include_router(audit.router)
+@app.get("/health", tags=["system"])
+@app.get("/api/health", tags=["system"])
+def health_check():
+    return {"status": "ok", "message": "PRAMAAN backend is running"}
+
+
+# Register all routers under both root prefix and /api prefix so all environments
+# (local development, test suites, and Vercel serverless rewrites) resolve flawlessly.
+for router_module in [pipeline.router, demo.router, report.router, audit.router]:
+    app.include_router(router_module)
+    app.include_router(router_module, prefix="/api")
+

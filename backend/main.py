@@ -1,17 +1,7 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+"""
+PRAMAAN Backend — root entry point alias.
+Directs to full application in app.main.
+"""
+from app.main import app
 
-app = FastAPI(title="PRAMAAN Backend")
-
-# Enable CORS for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "message": "PRAMAAN backend is running"}
+__all__ = ["app"]
