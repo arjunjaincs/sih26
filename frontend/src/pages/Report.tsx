@@ -63,6 +63,25 @@ export const Report: React.FC = () => {
     }))
   }
 
+  // Automatically expand all stages and clear toast before browser print dialog opens
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      if (report) {
+        const allOpen: Record<string, boolean> = {}
+        report.stages.forEach((st) => {
+          allOpen[st.stage_name] = true
+        })
+        setOpenStages(allOpen)
+      }
+      setToastMessage(null)
+    }
+
+    window.addEventListener('beforeprint', handleBeforePrint)
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint)
+    }
+  }, [report])
+
   const handleExportJSON = () => {
     if (!report) return
     const dataStr =
@@ -81,10 +100,20 @@ export const Report: React.FC = () => {
   }
 
   const handleExportPDF = () => {
-    showToast('Preparing formal audit document for print/PDF export...')
+    // 1. Expand all stage dossiers so complete audit chain is rendered in DOM
+    if (report) {
+      const allOpen: Record<string, boolean> = {}
+      report.stages.forEach((st) => {
+        allOpen[st.stage_name] = true
+      })
+      setOpenStages(allOpen)
+    }
+    // 2. Clear any active toast immediately so it never prints onto the page
+    setToastMessage(null)
+    // 3. Give React a render frame to unmount toast and mount all stage contents
     setTimeout(() => {
       window.print()
-    }, 400)
+    }, 250)
   }
 
   const showToast = (msg: string) => {
@@ -167,13 +196,13 @@ export const Report: React.FC = () => {
     : getRiskBadgeStyles('clean')
 
   return (
-    <div className="flex h-screen w-screen bg-[#0B1F3A] text-[#F4F6F9] overflow-hidden font-sans select-none">
+    <div className="report-page-root flex h-screen w-screen bg-[#0B1F3A] text-[#F4F6F9] overflow-hidden font-sans select-none print:h-auto print:w-full print:overflow-visible print:bg-white print:text-slate-900 print:block print:select-text">
       {/* 1. Left Collapsed Icon Sidebar (hidden in print) */}
       <Sidebar />
 
       {/* Main Content Viewport */}
       <motion.div
-        className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-[#0B1F3A]"
+        className="report-viewport flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-[#0B1F3A] print:h-auto print:w-full print:overflow-visible print:bg-white print:block print:p-0 print:m-0"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
@@ -229,14 +258,14 @@ export const Report: React.FC = () => {
           </div>
         </div>
 
-        {/* Toast Notification */}
+        {/* Toast Notification (Strictly hidden from print) */}
         <AnimatePresence>
           {toastMessage && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="fixed top-16 right-8 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-[#0B1F3A] border border-[#C9A24B] shadow-[0_0_20px_rgba(201,162,75,0.4)] text-xs font-mono text-[#F4F6F9]"
+              className="no-print print:hidden fixed top-16 right-8 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-[#0B1F3A] border border-[#C9A24B] shadow-[0_0_20px_rgba(201,162,75,0.4)] text-xs font-mono text-[#F4F6F9]"
             >
               <FileDown className="w-4 h-4 text-[#C9A24B]" />
               <span>{toastMessage}</span>
@@ -246,7 +275,7 @@ export const Report: React.FC = () => {
 
         {/* Error Notification */}
         {error && (
-          <div className="max-w-[880px] w-full mx-auto mt-4 px-4">
+          <div className="no-print print:hidden max-w-[880px] w-full mx-auto mt-4 px-4">
             <div className="bg-[#B03A2E]/20 border border-[#B03A2E]/60 rounded-lg p-3 text-xs font-mono text-[#F4F6F9] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-[#B03A2E]" />
@@ -265,14 +294,14 @@ export const Report: React.FC = () => {
         {/* ========================================================================= */}
         {/* FORMAL AUDIT DOCUMENT CONTAINER (Single-column, centered, max ~900px) */}
         {/* ========================================================================= */}
-        <div className="flex-1 px-4 sm:px-6 py-6 pb-20">
+        <div className="report-container flex-1 px-4 sm:px-6 py-6 pb-20 print:p-0 print:m-0 print:block">
           <article
-            className="report-document max-w-[880px] w-full mx-auto bg-[#0E2442]/95 border-t-4 border-[#C9A24B] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_0_0_1px_rgba(79,129,189,0.15)] rounded-sm p-6 sm:p-10 relative overflow-hidden"
+            className="report-document max-w-[880px] w-full mx-auto bg-[#0E2442]/95 border-t-4 border-[#C9A24B] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),0_0_0_1px_rgba(79,129,189,0.15)] rounded-sm p-6 sm:p-10 relative overflow-hidden print:overflow-visible print:max-w-none print:w-full print:p-0 print:m-0 print:border-none print:shadow-none print:bg-white"
             id="audit-report-document"
           >
-            {/* Subtle Security Document Watermark */}
+            {/* Subtle Security Document Watermark (screen only) */}
             <div
-              className="absolute inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.018] rotate-[-25deg] text-6xl font-black font-header tracking-widest text-[#F4F6F9]"
+              className="no-print print:hidden absolute inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.018] rotate-[-25deg] text-6xl font-black font-header tracking-widest text-[#F4F6F9]"
               aria-hidden="true"
             >
               PRAMAAN OFFICIAL AUDIT
@@ -290,7 +319,7 @@ export const Report: React.FC = () => {
             </div>
 
             {/* DOCUMENT SECTION 1: Formal Header Block */}
-            <header className="mb-8">
+            <header className="report-header break-inside-avoid mb-8">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -462,7 +491,7 @@ export const Report: React.FC = () => {
             {/* ========================================================================= */}
             {/* DOCUMENT SECTION 2: Executive Summary (Abstract Callout) */}
             {/* ========================================================================= */}
-            <section className="mb-10">
+            <section className="report-section-summary break-inside-avoid mb-10">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-serif font-doc text-xl font-normal text-[#F4F6F9] tracking-wide">
                   1. Executive Summary & Analyst Directive
@@ -568,7 +597,7 @@ export const Report: React.FC = () => {
                   return (
                     <div
                       key={stage.stage_name}
-                      className="border border-[#4F81BD]/30 bg-[#0B1F3A]/60 rounded-sm overflow-hidden transition-colors"
+                      className="report-stage-card break-inside-avoid border border-[#4F81BD]/30 bg-[#0B1F3A]/60 rounded-sm overflow-hidden transition-colors"
                     >
                       {/* Stage Accordion Header */}
                       <button
@@ -620,7 +649,7 @@ export const Report: React.FC = () => {
                               : 'Nominal'}
                           </span>
 
-                          <span className="text-[#4F81BD]">
+                          <span className="text-[#4F81BD] no-print print:hidden">
                             {isOpen ? (
                               <ChevronUp className="w-4 h-4" />
                             ) : (
@@ -638,7 +667,7 @@ export const Report: React.FC = () => {
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="border-t border-[#4F81BD]/20 px-5 py-5 bg-[#081526]/80"
+                            className="stage-accordion-content border-t border-[#4F81BD]/20 px-5 py-5 bg-[#081526]/80 print:!block print:!h-auto print:!opacity-100 print:!overflow-visible"
                           >
                             {hasFindings ? (
                               <div className="space-y-6">
@@ -651,7 +680,7 @@ export const Report: React.FC = () => {
                                   return (
                                     <div
                                       key={finding.finding_id || fIdx}
-                                      className="border-l-2 border-[#4F81BD]/40 pl-4 py-1 space-y-3"
+                                      className="finding-card break-inside-avoid border-l-2 border-[#4F81BD]/40 pl-4 py-1 space-y-3"
                                     >
                                       {/* Finding Title Row */}
                                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -697,7 +726,7 @@ export const Report: React.FC = () => {
                                       {/* Muted off-white/cream paper inset contrasting inside dark theme */}
                                       {/* Text on light: #3B3F45 per AGENTS.md tokens (never pure black/white) */}
                                       {/* ========================================================================= */}
-                                      <div className="bg-[#F0EDE5] text-[#3B3F45] rounded-sm p-4 sm:p-5 border border-[#D5D0C5] shadow-[inset_0_2px_4px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.3)]">
+                                      <div className="evidence-inset bg-[#F0EDE5] text-[#3B3F45] rounded-sm p-4 sm:p-5 border border-[#D5D0C5] shadow-[inset_0_2px_4px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.3)]">
                                         {/* Monospace Evidence Header Stamp */}
                                         <div className="border-b border-[#D5D0C5] pb-2 mb-3 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-[#5A6069]">
                                           <div className="flex items-center gap-1.5">
@@ -762,7 +791,7 @@ export const Report: React.FC = () => {
             {/* ========================================================================= */}
             {/* DOCUMENT SECTION 4: Audit Chain Verified Badge / Seal */}
             {/* ========================================================================= */}
-            <section className="mb-10" id="audit-chain-badge-section">
+            <section className="audit-chain-section break-inside-avoid mb-10" id="audit-chain-badge-section">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-serif font-doc text-xl font-normal text-[#F4F6F9] tracking-wide">
                   3. Cryptographic Audit Chain & Tamper Attestation
@@ -851,7 +880,7 @@ export const Report: React.FC = () => {
             <hr className="border-t border-[#4F81BD]/25 my-8" />
 
             {/* DOCUMENT SECTION 5: Formal Sign-off Ledger & Footer */}
-            <footer className="pt-2 text-xs font-mono text-slate-400">
+            <footer className="report-footer break-inside-avoid pt-2 text-xs font-mono text-slate-400">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-6 border-b border-[#4F81BD]/20">
                 <div>
                   <span className="block text-[10px] uppercase text-slate-500">
@@ -892,7 +921,10 @@ export const Report: React.FC = () => {
                 <span>
                   CONFIDENTIAL & PROPRIETARY // AIR-GAPPED VERIFICATION LOG // END OF REPORT
                 </span>
-                <span>Page 1 of 1 — Official Audit Record</span>
+                <span className="no-print">Official Audit Record</span>
+                <span className="hidden print:inline font-mono text-[10px] text-slate-600">
+                  PRAMAAN Autonomous Pipeline Assurance // Official Forensic Deliverable
+                </span>
               </div>
             </footer>
           </article>
