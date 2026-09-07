@@ -39,18 +39,6 @@ def health_check():
     return {"status": "ok", "message": "PRAMAAN backend is running"}
 
 
-@app.api_route("/api/index.py", methods=["GET", "POST", "PUT", "DELETE"])
-async def debug_vercel_route(request: Request):
-    from fastapi.responses import JSONResponse
-    return JSONResponse(
-        content={
-            "url": str(request.url),
-            "path": request.url.path,
-            "scope_path": request.scope.get("path"),
-            "headers": dict(request.headers),
-        }
-    )
-
 
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
