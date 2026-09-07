@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-pramaan-navy text-pramaan-text-dark font-sans antialiased;
+    margin: 0;
+    padding: 0;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-header text-pramaan-text-dark;
+  }
+}
+
+.font-doc {
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+@media print {
+  aside, .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  .report-document {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Global sleek dark scrollbar matching PRAMAAN design system */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B1F3A;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F497D;
+  border-radius: 9999px;
+  border: 1px solid rgba(79, 129, 189, 0.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4F81BD;
+}
+
+
