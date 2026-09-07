@@ -3,7 +3,7 @@ PRAMAAN Backend — FastAPI application entry point.
 Only concerns: app setup, CORS, and router registration.
 All business logic lives in routers/ and data/.
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import pipeline, demo, report, audit
@@ -37,6 +37,19 @@ app.add_middleware(
 @app.get("/api/health", tags=["system"])
 def health_check():
     return {"status": "ok", "message": "PRAMAAN backend is running"}
+
+
+@app.api_route("/api/index.py", methods=["GET", "POST", "PUT", "DELETE"])
+async def debug_vercel_route(request: Request):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content={
+            "url": str(request.url),
+            "path": request.url.path,
+            "scope_path": request.scope.get("path"),
+            "headers": dict(request.headers),
+        }
+    )
 
 
 @app.exception_handler(404)
