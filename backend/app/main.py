@@ -39,6 +39,15 @@ def health_check():
     return {"status": "ok", "message": "PRAMAAN backend is running"}
 
 
+@app.exception_handler(404)
+async def not_found_handler(request, exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=404,
+        content={"detail": f"Not Found: {request.url.path}"}
+    )
+
+
 # Register all routers under both root prefix and /api prefix so all environments
 # (local development, test suites, and Vercel serverless rewrites) resolve flawlessly.
 for router_module in [pipeline.router, demo.router, report.router, audit.router]:

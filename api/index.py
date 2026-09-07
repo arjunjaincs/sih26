@@ -8,4 +8,5 @@ if backend_dir not in sys.path:
 
 from app.main import app
 
-# Vercel looks for the ASGI/WSGI callable 'app' in this file
+# Vercel looks for the ASGI/WSGI callable 'app' or 'handler'
+handler = app
