@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <!-- PRAMAAN favicon: navy shield with gold P initial -->
-  <rect width="48" height="48" rx="10" fill="#0B1F3A"/>
-  <!-- Shield outline in gold -->
-  <path d="M24 6 L38 12 L38 26 C38 34 31 40 24 43 C17 40 10 34 10 26 L10 12 Z" fill="#1F497D" stroke="#C9A24B" stroke-width="1.5"/>
-  <!-- Gold P letterform -->
-  <text x="17" y="31" font-family="system-ui, sans-serif" font-size="18" font-weight="900" fill="#C9A24B" letter-spacing="-1">P</text>
-</svg>
