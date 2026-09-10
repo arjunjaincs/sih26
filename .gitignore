@@ -42,3 +42,6 @@ models/*.pt
 models/*.pth
 models/*.onnx
 data/raw/
+
+# PRAMAAN runtime data
+pramaan_data/
