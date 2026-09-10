@@ -82,7 +82,7 @@ class DetectorContext:
 
     assessment_id: str
     asset_id: str          # dataset_id or model_id
-    conn: sqlite3.Connection
+    conn: sqlite3.Connection | None = None  # Required by DB-querying detectors; None OK for pure detectors
 
     # Configurable thresholds — detectors should use these, not hardcode values
     phash_threshold: int = 10   # Maximum Hamming distance for near-duplicate pHash
