@@ -182,6 +182,14 @@ CREATE TABLE IF NOT EXISTS audit_events (
     current_hash    TEXT NOT NULL
 );
 
+-- Structured JSON payload for each audit event.
+-- Keyed by event_id.  Append-only by application convention.
+-- Stored separately so the chain table stays compact (no large blobs).
+CREATE TABLE IF NOT EXISTS audit_event_payloads (
+    event_id        TEXT PRIMARY KEY REFERENCES audit_events(event_id),
+    payload_json    TEXT NOT NULL
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_assets_assessment
     ON assets(assessment_id);
@@ -850,6 +858,14 @@ class AuditRepository:
         ).fetchone()
         return row["current_hash"] if row else self.GENESIS_HASH
 
+    def get(self, event_id: str) -> AuditEvent | None:
+        """Return a single AuditEvent by ID, or None."""
+        row = self._conn.execute(
+            "SELECT * FROM audit_events WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        return self._row_to_event(row) if row else None
+
     def list_all(self) -> list[AuditEvent]:
         """Return all events in insertion order."""
         rows = self._conn.execute(
@@ -876,3 +892,48 @@ class AuditRepository:
             previous_hash=row["previous_hash"],
             current_hash=row["current_hash"],
         )
+
+
+class AuditPayloadRepository:
+    """
+    Append-only store for structured JSON payloads linked to audit events.
+
+    The audit_events table stores only a payload_digest (SHA-256 of the JSON).
+    The actual payload JSON lives here, keyed by event_id.  This keeps the
+    chain table lean while making payload content available for inspection.
+
+    No UPDATE or DELETE methods — payloads are immutable once recorded.
+    """
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self._conn = conn
+
+    def insert(self, event_id: str, payload: dict) -> None:
+        """Insert a payload for the given event_id. Raises on duplicate."""
+        payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        self._conn.execute(
+            "INSERT INTO audit_event_payloads (event_id, payload_json) VALUES (?,?)",
+            (event_id, payload_json),
+        )
+        self._conn.commit()
+
+    def get(self, event_id: str) -> dict | None:
+        """Return the payload dict for *event_id*, or None if not stored."""
+        row = self._conn.execute(
+            "SELECT payload_json FROM audit_event_payloads WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return json.loads(row["payload_json"])
+
+    def get_all_for_events(self, event_ids: list[str]) -> dict[str, dict]:
+        """Return a mapping of event_id → payload for the given IDs."""
+        if not event_ids:
+            return {}
+        placeholders = ",".join("?" * len(event_ids))
+        rows = self._conn.execute(
+            f"SELECT event_id, payload_json FROM audit_event_payloads WHERE event_id IN ({placeholders})",
+            event_ids,
+        ).fetchall()
+        return {r["event_id"]: json.loads(r["payload_json"]) for r in rows}

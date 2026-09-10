@@ -174,3 +174,4 @@ class AuditEventType(str, Enum):
     PROVENANCE_CREATED = "provenance_created"
     PROVENANCE_VERIFIED = "provenance_verified"
     PROVENANCE_TAMPERED = "provenance_tampered"
+    AUDIT_VERIFIED = "audit_verified"      # Chain integrity verification run
