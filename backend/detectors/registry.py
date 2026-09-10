@@ -13,10 +13,12 @@ from __future__ import annotations
 
 from backend.detectors.base import Detector
 from backend.detectors.data.di01_duplicates import DI01DuplicateDetector
+from backend.detectors.model.mi01_fingerprint import MI01FingerprintDetector
 
 # All available detectors — ordered by typical execution priority.
 ALL_DETECTORS: list[Detector] = [
     DI01DuplicateDetector(),
+    MI01FingerprintDetector(),
 ]
 
 # Lookup by detector_id for quick access.

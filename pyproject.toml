@@ -25,6 +25,13 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
 ]
+# Model-analysis extras — optional so the core package installs without them.
+# Install with: pip install -e ".[models]"
+models = [
+    "onnx>=1.16.0",
+    "onnxruntime>=1.18.0",
+    "torch>=2.0.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
