@@ -1,66 +1,106 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, ChevronDown, ChevronRight, Info } from 'lucide-react';
-import { createAssessment, getCapabilities, NetworkError } from '../api/client';
-import type { CapabilitiesResponse, AssessmentResultSchema } from '../types/api';
-import { Panel } from '../components/Panel';
-import { Button } from '../components/Button';
-import { ErrorState } from '../components/ErrorState';
+import { ArrowRight, X } from 'lucide-react';
+import { createAssessment, getCapabilities } from '../api/client';
+import type { CapabilitiesResponse, AssessmentResultSchema, DetectorCapabilitySchema } from '../types/api';
 import { cn } from '../lib/cn';
 
-type Stage = 'form' | 'submitting' | 'error';
+type Stage = 'form' | 'running' | 'error';
 
-const DATASET_FORMATS = [
-  { value: 'image_dir', label: 'Image Directory' },
-  { value: 'coco_json', label: 'COCO JSON' },
+const PIPELINE_STEPS = [
+  'Validating input files',
+  'Ingesting assets',
+  'Running detectors',
+  'Collecting evidence',
+  'Generating report',
 ];
 
-interface FormState {
-  title: string;
-  datasetPath: string;
-  datasetFormat: string;
-  modelPath: string;
-  phashThreshold: number;
-  dhashThreshold: number;
-  minClusterSize: number;
+interface FieldProps {
+  label: string;
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  helpText?: string;
+  type?: string;
+  onClear?: () => void;
 }
 
-const INITIAL_FORM: FormState = {
-  title: '',
-  datasetPath: '',
-  datasetFormat: 'image_dir',
-  modelPath: '',
-  phashThreshold: 10,
-  dhashThreshold: 10,
-  minClusterSize: 2,
-};
+function Field({ label, id, value, onChange, placeholder, required, helpText, type = 'text', onClear }: FieldProps) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="label">
+        {label}
+        {required && <span className="text-[var(--red)] ml-0.5">*</span>}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          className={cn(
+            'w-full h-9 px-3 rounded border border-[var(--border)] bg-surface text-1',
+            'text-sm placeholder:text-4',
+            'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30',
+            'transition-colors duration-150',
+            onClear && value && 'pr-8',
+          )}
+        />
+        {onClear && value && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-3 hover:text-1"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      {helpText && <p className="text-[11px] text-3">{helpText}</p>}
+    </div>
+  );
+}
 
-function InputField({
-  label, id, value, onChange, placeholder, required, helpText, type = 'text',
-}: {
-  label: string; id: string; value: string | number; onChange: (v: string) => void;
-  placeholder?: string; required?: boolean; helpText?: string; type?: string;
+function Select({ label, id, value, onChange, options }: {
+  label: string; id: string; value: string; onChange: (v: string) => void;
+  options: { value: string; label: string }[];
 }) {
   return (
-    <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
-        {label}{required && <span className="text-[var(--risk-critical)] ml-0.5">*</span>}
-      </label>
-      <input
+    <div className="space-y-1">
+      <label htmlFor={id} className="label">{label}</label>
+      <select
         id={id}
-        type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
+        onChange={e => onChange(e.target.value)}
         className={cn(
-          'w-full rounded border border-[var(--border)] bg-[var(--surface-0)]',
-          'px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-          'focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]',
+          'w-full h-9 px-3 rounded border border-[var(--border)] bg-surface text-1 text-sm',
+          'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30',
           'transition-colors duration-150',
         )}
-      />
-      {helpText && <p className="mt-1 text-[10px] text-[var(--text-muted)]">{helpText}</p>}
+      >
+        <option value="">Select…</option>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function DetectorRow({ d }: { d: DetectorCapabilitySchema }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+      <div className="flex items-center gap-2 min-w-0">
+        <code className="text-[10px] font-mono font-semibold text-accent w-10 flex-shrink-0">{d.detector_id}</code>
+        <span className="text-xs text-2 truncate">{d.name}</span>
+        <span className="text-[10px] text-3 flex-shrink-0">(optional)</span>
+      </div>
+      <div className={cn(
+        'flex-shrink-0 w-1.5 h-1.5 rounded-full',
+        d.available ? 'bg-[var(--green)]' : 'bg-[var(--border-strong)]',
+      )} />
     </div>
   );
 }
@@ -68,267 +108,285 @@ function InputField({
 export function NewAssessment() {
   const navigate = useNavigate();
   const [stage, setStage] = useState<Stage>('form');
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [title, setTitle] = useState('');
+  const [modelPath, setModelPath] = useState('');
+  const [datasetPath, setDatasetPath] = useState('');
+  const [datasetFormat, setDatasetFormat] = useState('image_dir');
+  const [provenancePath, setProvenancePath] = useState('');
   const [caps, setCaps] = useState<CapabilitiesResponse | null>(null);
-  const [error, setError] = useState<{ message: string; isNetwork: boolean } | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [pipelineStep, setPipelineStep] = useState(0);
+  const pipelineRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     getCapabilities().then(setCaps).catch(() => {});
   }, []);
 
-  const update = (field: keyof FormState) => (value: string) => {
-    setForm((f) => ({ ...f, [field]: field.includes('Threshold') || field === 'minClusterSize' ? Number(value) : value }));
-  };
+  function validate() {
+    const e: string[] = [];
+    if (!title.trim()) e.push('Assessment title is required.');
+    if (!modelPath.trim() && !datasetPath.trim()) e.push('Provide at least one asset path.');
+    return e;
+  }
 
-  const hasDataset = form.datasetPath.trim().length > 0;
-  const hasModel = form.modelPath.trim().length > 0;
-  const hasAsset = hasDataset || hasModel;
+  function startPipelineAnimation() {
+    setPipelineStep(0);
+    let step = 0;
+    pipelineRef.current = setInterval(() => {
+      step++;
+      if (step < PIPELINE_STEPS.length - 1) {
+        setPipelineStep(step);
+      }
+    }, 1800);
+  }
 
-  function validate(): string[] {
-    const errs: string[] = [];
-    if (!form.title.trim()) errs.push('Assessment title is required.');
-    if (!hasAsset) errs.push('At least one of Dataset Path or Model Path must be provided.');
-    if (hasDataset && !form.datasetFormat) errs.push('Dataset format is required when dataset path is set.');
-    return errs;
+  function stopPipeline() {
+    if (pipelineRef.current) clearInterval(pipelineRef.current);
+    setPipelineStep(PIPELINE_STEPS.length - 1);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (errs.length > 0) { setValidationErrors(errs); return; }
-    setValidationErrors([]);
-    setStage('submitting');
-    setError(null);
+    if (errs.length) { setErrors(errs); return; }
+    setErrors([]);
+    setStage('running');
+    startPipelineAnimation();
 
     try {
       const result: AssessmentResultSchema = await createAssessment({
-        title: form.title.trim(),
-        dataset_path: hasDataset ? form.datasetPath.trim() : null,
-        dataset_format: hasDataset ? form.datasetFormat : null,
-        model_path: hasModel ? form.modelPath.trim() : null,
-        phash_threshold: form.phashThreshold,
-        dhash_threshold: form.dhashThreshold,
-        min_cluster_size: form.minClusterSize,
+        title: title.trim(),
+        dataset_path: datasetPath.trim() || null,
+        dataset_format: datasetPath.trim() ? datasetFormat : null,
+        model_path: modelPath.trim() || null,
       });
-
-      // Store result in sessionStorage for the result page
+      stopPipeline();
       sessionStorage.setItem('pramaan_last_assessment_id', result.assessment_id);
       navigate(`/assessments/${result.assessment_id}/result`, { state: { result } });
     } catch (err) {
+      stopPipeline();
+      setErrorMsg(err instanceof Error ? err.message : 'Assessment failed.');
       setStage('error');
-      setError({
-        message: err instanceof Error ? err.message : 'Assessment failed.',
-        isNetwork: err instanceof NetworkError,
-      });
     }
   }
 
+  if (stage === 'running') {
+    return (
+      <div className="min-h-[calc(100vh-3rem)] flex flex-col items-center justify-center px-6">
+        <div className="max-w-lg w-full space-y-8">
+          <div>
+            <p className="label text-accent mb-2">PRAMAAN · Running</p>
+            <h1 className="text-2xl font-bold text-1">Running Assessment</h1>
+            <p className="mt-1 text-sm text-3">
+              PRAMAAN is analysing your assets. This may take a few moments.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            {PIPELINE_STEPS.map((step, i) => {
+              const done = i < pipelineStep;
+              const active = i === pipelineStep;
+              return (
+                <div key={step} className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0">
+                  <div className={cn(
+                    'flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center border',
+                    done  ? 'bg-[var(--green)] border-[var(--green)]' :
+                    active ? 'border-accent' :
+                    'border-[var(--border)]',
+                  )}>
+                    {done ? (
+                      <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    ) : active ? (
+                      <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                    ) : null}
+                  </div>
+                  <span className="text-sm text-2 flex-1">{step}</span>
+                  <span className={cn(
+                    'text-xs',
+                    done ? 'text-[var(--green)]' : active ? 'text-accent' : 'text-3',
+                  )}>
+                    {done ? 'Completed' : active ? 'in progress…' : 'Pending'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-3 italic text-center">"Evidence over assumptions."</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (stage === 'error') {
+    return (
+      <div className="min-h-[calc(100vh-3rem)] flex flex-col items-center justify-center px-6">
+        <div className="max-w-md w-full text-center space-y-4">
+          <div className="w-10 h-10 rounded-full bg-[var(--red-bg)] flex items-center justify-center mx-auto">
+            <X className="w-5 h-5 text-[var(--red)]" />
+          </div>
+          <h2 className="text-lg font-semibold text-1">Assessment Failed</h2>
+          <p className="text-sm text-3">{errorMsg}</p>
+          {errorMsg.toLowerCase().includes('reach') || errorMsg.toLowerCase().includes('connect') ? (
+            <p className="text-xs text-3">Start the local PRAMAAN service and try again.</p>
+          ) : null}
+          <button
+            onClick={() => { setStage('form'); setErrorMsg(''); }}
+            className="px-4 py-2 rounded border border-[var(--border)] text-sm text-1 hover:bg-surface-2 transition-colors"
+          >
+            Back to form
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8 space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">New Assessment</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Configure and run an integrity assurance assessment against local assets.
+    <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="mb-6">
+        <p className="label text-accent mb-1">PRAMAAN · Assessment</p>
+        <h1 className="text-2xl font-bold text-1">New Assessment</h1>
+        <p className="mt-1 text-sm text-3">
+          Select the assets you want to assess. PRAMAAN will run the applicable integrity checks
+          and generate a detailed report.
         </p>
       </div>
 
-      {stage === 'submitting' && (
-        <Panel title="Running Assessment">
-          <div className="py-8 flex flex-col items-center gap-4 text-center">
-            <div className="flex items-center gap-3">
-              {['SUBMITTING', 'PROCESSING'].map((s, i) => (
-                <div key={s} className="flex items-center gap-2">
-                  {i > 0 && <div className="w-6 h-px bg-[var(--border)]" />}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--accent)] bg-[var(--accent-light)]">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-                    <span className="text-xs font-semibold text-[var(--accent)]">{s}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-[var(--text-secondary)]">
-              PRAMAAN is running real analysis against your assets.
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">
-              This may take a moment depending on dataset and model size.
-            </p>
-          </div>
-        </Panel>
-      )}
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+          {/* Main form */}
+          <div className="space-y-6">
+            {/* Errors */}
+            {errors.length > 0 && (
+              <div className="p-3 rounded border border-[var(--red)]/30 bg-[var(--red-bg)] space-y-1">
+                {errors.map((e, i) => <p key={i} className="text-xs text-[var(--red)]">{e}</p>)}
+              </div>
+            )}
 
-      {stage === 'error' && error && (
-        <Panel>
-          <ErrorState
-            title={error.isNetwork ? 'Backend Unavailable' : 'Assessment Failed'}
-            message={error.message}
-            isNetwork={error.isNetwork}
-            onRetry={() => { setStage('form'); setError(null); }}
-          />
-        </Panel>
-      )}
-
-      {stage === 'form' && (
-        <form onSubmit={handleSubmit} noValidate className="space-y-5">
-          {/* Validation errors */}
-          {validationErrors.length > 0 && (
-            <div className="rounded-lg border border-[var(--risk-critical)] bg-[var(--risk-critical-bg)] p-3 space-y-1">
-              {validationErrors.map((e, i) => (
-                <p key={i} className="text-xs text-[var(--risk-critical)]">{e}</p>
-              ))}
-            </div>
-          )}
-
-          {/* Basic info */}
-          <Panel title="Assessment Details">
-            <InputField
-              label="Title"
+            <Field
+              label="Assessment Title"
               id="title"
-              value={form.title}
-              onChange={update('title')}
-              placeholder="e.g. Pedestrian Detection Dataset Audit Q3-2026"
+              value={title}
+              onChange={setTitle}
+              placeholder="My Model Safety Check"
               required
+              helpText="A descriptive name for this assessment."
             />
-          </Panel>
 
-          {/* Dataset */}
-          <Panel title="Dataset" description="Optional — required for Data Integrity (DI-01) analysis">
-            <div className="space-y-4">
-              <InputField
-                label="Dataset Path"
+            {/* Divider */}
+            <div className="pt-1">
+              <p className="label mb-3">Model File (ONNX / PyTorch)</p>
+              <div className="relative">
+                <input
+                  id="model_path"
+                  type="text"
+                  value={modelPath}
+                  onChange={e => setModelPath(e.target.value)}
+                  placeholder="Select model file (optional)"
+                  className={cn(
+                    'w-full h-9 px-3 pr-8 rounded border border-[var(--border)] bg-surface text-1 text-sm placeholder:text-4',
+                    'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30',
+                    'transition-colors duration-150',
+                  )}
+                />
+                {modelPath && (
+                  <button type="button" onClick={() => setModelPath('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-3 hover:text-1">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-[11px] text-3">Absolute path to a .onnx or .pt/.pth model file.</p>
+            </div>
+
+            <div className="border-t border-[var(--border)] pt-5 space-y-4">
+              <p className="label">Dataset (Images, CSV, etc.)</p>
+              <Field
+                label=""
                 id="dataset_path"
-                value={form.datasetPath}
-                onChange={update('datasetPath')}
-                placeholder="C:\absolute\path\to\dataset"
-                helpText="Absolute path to an image directory or COCO JSON file. Must exist on this machine."
+                value={datasetPath}
+                onChange={setDatasetPath}
+                placeholder="Select dataset (optional)"
+                onClear={() => setDatasetPath('')}
               />
-              {hasDataset && (
-                <div>
-                  <label htmlFor="dataset_format" className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
-                    Dataset Format<span className="text-[var(--risk-critical)] ml-0.5">*</span>
-                  </label>
-                  <select
-                    id="dataset_format"
-                    value={form.datasetFormat}
-                    onChange={(e) => setForm((f) => ({ ...f, datasetFormat: e.target.value }))}
-                    className={cn(
-                      'w-full rounded border border-[var(--border)] bg-[var(--surface-0)]',
-                      'px-3 py-2 text-sm text-[var(--text-primary)]',
-                      'focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]',
-                    )}
-                  >
-                    {DATASET_FORMATS.map((f) => (
-                      <option key={f.value} value={f.value}>{f.label}</option>
-                    ))}
-                  </select>
+              {datasetPath && (
+                <Select
+                  label="Format"
+                  id="dataset_format"
+                  value={datasetFormat}
+                  onChange={setDatasetFormat}
+                  options={[
+                    { value: 'image_dir', label: 'Image Directory' },
+                    { value: 'coco_json', label: 'COCO JSON' },
+                  ]}
+                />
+              )}
+            </div>
+
+            <div className="border-t border-[var(--border)] pt-5">
+              <Field
+                label="Provenance Manifest (JSON)"
+                id="provenance"
+                value={provenancePath}
+                onChange={setProvenancePath}
+                placeholder="Select provenance manifest (optional)"
+                onClear={() => setProvenancePath('')}
+              />
+            </div>
+
+            {/* CTA */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={!title.trim()}
+                className={cn(
+                  'inline-flex items-center gap-2 px-6 py-2.5 rounded',
+                  'bg-accent text-white text-sm font-semibold',
+                  'hover:bg-[var(--accent-2)] transition-colors duration-150',
+                  'active:scale-[0.97]',
+                  'disabled:opacity-40 disabled:cursor-not-allowed',
+                )}
+              >
+                Run Assessment
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right: What will run */}
+          <aside className="border border-[var(--border)] rounded-lg bg-surface p-5 h-fit space-y-4 lg:sticky lg:top-16">
+            <div>
+              <p className="label mb-1">What will run?</p>
+              <p className="text-xs text-3 leading-relaxed">
+                PRAMAAN automatically selects the applicable checks based on the assets you provide.
+              </p>
+            </div>
+
+            <div className="divide-y divide-[var(--border)]">
+              {caps?.detectors.map(d => (
+                <DetectorRow key={d.detector_id} d={d} />
+              )) ?? (
+                <div className="space-y-2 py-1">
+                  {['DI-01', 'MI-01', 'PI-01'].map(id => (
+                    <div key={id} className="flex items-center gap-2 py-2 text-xs text-3">
+                      <code className="font-mono text-accent w-10">{id}</code>
+                      <span>–</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          </Panel>
 
-          {/* Model */}
-          <Panel title="Model" description="Optional — required for Model Integrity (MI-01) analysis">
-            <InputField
-              label="Model Path"
-              id="model_path"
-              value={form.modelPath}
-              onChange={update('modelPath')}
-              placeholder="C:\absolute\path\to\model.onnx"
-              helpText="Absolute path to a .onnx, .pt, or .pth model file."
-            />
-          </Panel>
-
-          {/* Available detectors for context */}
-          {caps && (
-            <div className="flex flex-wrap gap-2 px-1">
-              {caps.detectors.map((d) => (
-                <div
-                  key={d.detector_id}
-                  className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)]"
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${d.available ? 'bg-[var(--risk-none)]' : 'bg-[var(--border)]'}`} />
-                  {d.detector_id} · {d.available ? 'available' : 'unavailable'}
-                </div>
-              ))}
+            <div className="pt-1 text-[11px] text-3 border-t border-[var(--border)]">
+              <p className="font-medium text-2 mb-0.5">Not sure?</p>
+              <p>PRAMAAN automatically detects which checks are applicable based on the assets you provide.</p>
             </div>
-          )}
-
-          {/* Advanced */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced((s) => !s)}
-              className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              {showAdvanced ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-              Advanced detector settings
-            </button>
-            {showAdvanced && (
-              <Panel className="mt-2">
-                <div className="grid grid-cols-3 gap-4">
-                  <InputField
-                    label="pHash Threshold"
-                    id="phash_threshold"
-                    type="number"
-                    value={form.phashThreshold}
-                    onChange={update('phashThreshold')}
-                    helpText="0–64, default 10"
-                  />
-                  <InputField
-                    label="dHash Threshold"
-                    id="dhash_threshold"
-                    type="number"
-                    value={form.dhashThreshold}
-                    onChange={update('dhashThreshold')}
-                    helpText="0–64, default 10"
-                  />
-                  <InputField
-                    label="Min Cluster Size"
-                    id="min_cluster_size"
-                    type="number"
-                    value={form.minClusterSize}
-                    onChange={update('minClusterSize')}
-                    helpText="≥2, default 2"
-                  />
-                </div>
-              </Panel>
-            )}
-          </div>
-
-          {/* Summary before submit */}
-          {hasAsset && form.title.trim() && (
-            <Panel className="border-[var(--accent)]">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-[var(--accent)] flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-[var(--text-secondary)] space-y-0.5">
-                  <p className="font-semibold text-[var(--text-primary)]">Ready to run:</p>
-                  <p>Title: <span className="font-medium">{form.title}</span></p>
-                  {hasDataset && <p>Dataset: <span className="font-mono text-[10px]">{form.datasetPath}</span> ({form.datasetFormat})</p>}
-                  {hasModel && <p>Model: <span className="font-mono text-[10px]">{form.modelPath}</span></p>}
-                </div>
-              </div>
-            </Panel>
-          )}
-
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => { setForm(INITIAL_FORM); setValidationErrors([]); }}
-            >
-              Reset
-            </Button>
-            <Button
-              type="submit"
-              leftIcon={<Play className="w-4 h-4" />}
-              disabled={!form.title.trim() || !hasAsset}
-            >
-              Run Assurance Assessment
-            </Button>
-          </div>
-        </form>
-      )}
+          </aside>
+        </div>
+      </form>
     </div>
   );
 }

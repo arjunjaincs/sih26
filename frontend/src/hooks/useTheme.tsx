@@ -15,10 +15,10 @@ export const ThemeContext = createContext<ThemeContextValue>({
 const STORAGE_KEY = 'pramaan-theme';
 
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'light';
+  if (typeof window === 'undefined') return 'dark';
   const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
   if (stored === 'light' || stored === 'dark') return stored;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'dark';
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

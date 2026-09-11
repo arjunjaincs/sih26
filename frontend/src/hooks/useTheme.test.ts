@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 
 describe('useTheme', () => {
-  it('defaults to light theme when no stored preference and system is light', async () => {
+  it('defaults to dark theme when no stored preference', async () => {
     const { ThemeProvider, useTheme } = await import('../hooks/useTheme');
     const { render, screen } = await import('@testing-library/react');
     const { createElement } = await import('react');
@@ -32,6 +32,6 @@ describe('useTheme', () => {
       return createElement('div', { 'data-testid': 'theme' }, theme);
     }
     render(createElement(ThemeProvider, null, createElement(Probe)));
-    expect(screen.getByTestId('theme').textContent).toBe('light');
+    expect(screen.getByTestId('theme').textContent).toBe('dark');
   });
 });

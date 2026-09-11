@@ -9,33 +9,22 @@ export default {
         mono: ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'monospace'],
       },
       colors: {
-        surface: {
-          0: 'var(--surface-0)',
-          1: 'var(--surface-1)',
-          2: 'var(--surface-2)',
-          elevated: 'var(--surface-elevated)',
-        },
-        border: {
-          DEFAULT: 'var(--border)',
-          subtle: 'var(--border-subtle)',
-        },
-        accent: {
-          DEFAULT: 'var(--accent)',
-          hover: 'var(--accent-hover)',
-          light: 'var(--accent-light)',
-        },
-        amber: {
-          DEFAULT: 'var(--amber)',
-          light: 'var(--amber-light)',
-        },
+        bg:        'var(--bg)',
+        surface:   'var(--surface)',
+        surface2:  'var(--surface-2)',
+        surface3:  'var(--surface-3)',
+        accent:    { DEFAULT: 'var(--accent)', 2: 'var(--accent-2)' },
+        text1:     'var(--text-1)',
+        text2:     'var(--text-2)',
+        text3:     'var(--text-3)',
+        text4:     'var(--text-4)',
+        green:     'var(--green)',
+        amber:     { DEFAULT: 'var(--amber)', warn: 'var(--amber)' },
+        red:       'var(--red)',
       },
-      spacing: {
-        sidebar: 'var(--sidebar-width)',
-      },
-      boxShadow: {
-        card: 'var(--shadow-md)',
-        sm: 'var(--shadow-sm)',
-        lg: 'var(--shadow-lg)',
+      borderColor: {
+        DEFAULT: 'var(--border)',
+        strong: 'var(--border-strong)',
       },
       transitionDuration: {
         DEFAULT: '150ms',

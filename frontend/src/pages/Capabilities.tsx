@@ -1,149 +1,170 @@
 import { useEffect, useState } from 'react';
-import { Cpu, CheckCircle, XCircle } from 'lucide-react';
-import type { CapabilitiesResponse } from '../types/api';
-import { getCapabilities } from '../api/client';
-import { Panel } from '../components/Panel';
+import { Database, Cpu, GitBranch, ChevronDown, ChevronUp } from 'lucide-react';
+import type { CapabilitiesResponse, DetectorCapabilitySchema } from '../types/api';
+import { getCapabilities, NetworkError } from '../api/client';
 import { ErrorState } from '../components/ErrorState';
 import { cn } from '../lib/cn';
 
-export function Capabilities() {
-  const [data, setData] = useState<CapabilitiesResponse | null>(null);
-  const [error, setError] = useState<{ message: string; isNetwork: boolean } | null>(null);
-  const [loading, setLoading] = useState(true);
+const DETECTOR_META: Record<string, { icon: typeof Database; color: string; bg: string }> = {
+  'DI-01': { icon: Database,  color: 'text-blue-400',   bg: 'bg-blue-500/10' },
+  'MI-01': { icon: Cpu,       color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  'PI-01': { icon: GitBranch, color: 'text-amber-400',  bg: 'bg-amber-500/10' },
+};
 
-  useEffect(() => {
-    getCapabilities()
-      .then((r) => { setData(r); setLoading(false); })
-      .catch((err) => { setError({ message: err.message, isNetwork: err.name === 'NetworkError' }); setLoading(false); });
-  }, []);
-
-  const available = data?.detectors.filter((d) => d.available).length ?? 0;
-  const total = data?.detectors.length ?? 0;
+function DetectorCard({ d }: { d: DetectorCapabilitySchema }) {
+  const [expanded, setExpanded] = useState(false);
+  const meta = DETECTOR_META[d.detector_id] ?? { icon: Database, color: 'text-accent', bg: 'bg-[var(--accent-bg)]' };
+  const Icon = meta.icon;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 space-y-5">
+    <div className={cn(
+      'card flex flex-col gap-4 p-6 transition-shadow duration-150',
+      'hover:shadow-[0_0_0_1px_var(--accent)]',
+    )}>
+      {/* Icon + ID */}
+      <div className="flex items-start justify-between gap-3">
+        <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0', meta.bg)}>
+          <Icon className={cn('w-4.5 h-4.5', meta.color)} />
+        </div>
+        <code className="text-[10px] font-mono font-bold text-accent">{d.detector_id}</code>
+      </div>
+
+      {/* Name + description */}
       <div>
-        <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">Capabilities</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          What PRAMAAN can establish in this environment. Availability depends on installed dependencies and asset access.
+        <h3 className="text-sm font-semibold text-1 leading-snug">{d.name}</h3>
+        <p className="mt-1.5 text-xs text-3 leading-relaxed">
+          {expanded ? d.description : d.description.slice(0, 120) + (d.description.length > 120 ? '…' : '')}
         </p>
       </div>
 
-      {loading && (
-        <div className="space-y-3 animate-pulse">
-          {[1, 2, 3].map((i) => <div key={i} className="h-28 rounded-lg bg-[var(--surface-2)]" />)}
+      {/* Metadata */}
+      <div className="space-y-2 text-xs">
+        <div>
+          <p className="label mb-1">Version</p>
+          <code className="font-mono text-2">{d.version}</code>
+        </div>
+
+        <div>
+          <p className="label mb-1">Supported Formats</p>
+          <div className="flex flex-wrap gap-1">
+            {d.applicable_asset_types.map(t => (
+              <span key={t} className="px-1.5 py-0.5 rounded bg-surface-2 border border-[var(--border)]
+                text-[10px] font-mono text-2">
+                {t.toUpperCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Expandable details */}
+      {d.description.length > 120 && (
+        <button
+          onClick={() => setExpanded(o => !o)}
+          className="flex items-center gap-1 text-[10px] text-3 hover:text-1 transition-colors mt-auto"
+        >
+          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+
+      {/* Availability badge */}
+      <div className={cn(
+        'mt-auto flex items-center gap-1.5 text-xs font-semibold',
+        d.available ? 'text-[var(--green)]' : 'text-3',
+      )}>
+        <div className={cn(
+          'w-1.5 h-1.5 rounded-full',
+          d.available ? 'bg-[var(--green)]' : 'bg-[var(--border-strong)]',
+        )} />
+        {d.available ? 'Available' : 'Unavailable'}
+      </div>
+    </div>
+  );
+}
+
+export function Capabilities() {
+  const [data, setData] = useState<CapabilitiesResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    let m = true;
+    getCapabilities()
+      .then(d => { if (m) { setData(d); setLoading(false); } })
+      .catch(err => {
+        if (m) {
+          setOffline(err instanceof NetworkError);
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+    return () => { m = false; };
+  }, []);
+
+  if (loading) return (
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-pulse">
+        {[...Array(3)].map((_, i) => <div key={i} className="h-64 bg-surface-2 rounded-lg" />)}
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      <ErrorState
+        title="Could not load capabilities"
+        message={offline
+          ? 'The PRAMAAN backend is not running. Start it and refresh.'
+          : error}
+      />
+    </div>
+  );
+
+  const detectors = data?.detectors ?? [];
+
+  return (
+    <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      {/* Header */}
+      <div>
+        <p className="label text-accent mb-1">PRAMAAN · System</p>
+        <h1 className="text-2xl font-bold text-1">Capabilities</h1>
+        <p className="mt-0.5 text-sm text-3">Supported detectors and file formats.</p>
+      </div>
+
+      {/* Detector grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {detectors.map(d => <DetectorCard key={d.detector_id} d={d} />)}
+      </div>
+
+      {/* Formats reference */}
+      {data && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-[var(--border)]">
+          {[
+            { label: 'Dataset Formats', items: data.supported_dataset_formats },
+            { label: 'Model Formats', items: data.supported_model_formats },
+          ].map(({ label, items }) => (
+            <div key={label}>
+              <p className="label mb-2">{label}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {items.map(f => (
+                  <code key={f} className="px-2 py-1 rounded bg-surface-2 border border-[var(--border)]
+                    text-[11px] font-mono text-2">
+                    {f}
+                  </code>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {error && !loading && (
-        <Panel>
-          <ErrorState message={error.message} isNetwork={error.isNetwork} onRetry={() => window.location.reload()} />
-        </Panel>
-      )}
-
-      {!loading && !error && data && (
-        <>
-          {/* Summary */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface-1)]">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Detectors</p>
-              <p className="text-2xl font-bold text-[var(--text-primary)] mt-1">
-                {available}<span className="text-[var(--text-muted)] text-base font-normal">/{total}</span>
-              </p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">available</p>
-            </div>
-            <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface-1)]">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Dataset Formats</p>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {data.supported_dataset_formats.map((f) => (
-                  <code key={f} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-2)] font-mono text-[var(--text-secondary)]">
-                    {f}
-                  </code>
-                ))}
-              </div>
-            </div>
-            <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface-1)]">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Model Formats</p>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {data.supported_model_formats.map((f) => (
-                  <code key={f} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-2)] font-mono text-[var(--text-secondary)]">
-                    {f}
-                  </code>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Detector cards */}
-          <Panel title="Detectors" description={`PRAMAAN v${data.pramaan_version}`}>
-            <div className="space-y-3">
-              {data.detectors.map((d) => (
-                <div
-                  key={d.detector_id}
-                  className={cn(
-                    'rounded-lg border p-4 transition-colors duration-150',
-                    d.available
-                      ? 'border-[var(--border)] bg-[var(--surface-1)]'
-                      : 'border-[var(--border-subtle)] bg-[var(--surface-0)] opacity-75',
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="flex items-center justify-center w-8 h-8 rounded bg-[var(--surface-2)] flex-shrink-0 mt-0.5">
-                        <Cpu className="w-4 h-4 text-[var(--text-muted)]" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <code className="text-xs font-mono font-semibold text-[var(--accent)]">
-                            {d.detector_id}
-                          </code>
-                          <span className="text-[10px] text-[var(--text-muted)]">v{d.version}</span>
-                        </div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)] mt-0.5">{d.name}</p>
-                        <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">{d.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 flex items-center gap-1.5">
-                      {d.available ? (
-                        <CheckCircle className="w-4 h-4 text-[var(--risk-none)]" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-[var(--text-muted)]" />
-                      )}
-                      <span className={cn(
-                        'text-xs font-semibold',
-                        d.available ? 'text-[var(--risk-none)]' : 'text-[var(--text-muted)]',
-                      )}>
-                        {d.available ? 'Available' : 'Unavailable'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Asset types */}
-                  <div className="mt-3 flex flex-wrap gap-1.5 pl-11">
-                    {d.applicable_asset_types.map((t) => (
-                      <span
-                        key={t}
-                        className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--border)] text-[var(--text-muted)] bg-[var(--surface-2)]"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Unavailability notice */}
-                  {!d.available && (
-                    <div className="mt-3 pl-11">
-                      <p className="text-[10px] text-[var(--text-muted)] italic">
-                        This detector's runtime dependencies are not satisfied in the current environment.
-                        Install the optional <code className="font-mono">[models]</code> extras to enable it.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </>
+      {/* Version */}
+      {data?.pramaan_version && (
+        <p className="text-xs text-3">
+          PRAMAAN v{data.pramaan_version}
+        </p>
       )}
     </div>
   );

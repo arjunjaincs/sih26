@@ -1,198 +1,194 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Cpu, ShieldCheck, AlertCircle } from 'lucide-react';
-import { getHealth, getCapabilities, NetworkError } from '../api/client';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Shield, Database, Cpu, GitBranch } from 'lucide-react';
+import { getHealth, getCapabilities } from '../api/client';
 import type { HealthResponse, CapabilitiesResponse } from '../types/api';
-import { Panel } from '../components/Panel';
-import { ErrorState } from '../components/ErrorState';
+
+const IntegrityCore = lazy(() =>
+  import('../components/three/IntegrityCore').then(m => ({ default: m.IntegrityCore }))
+);
+
+const SIGNALS = [
+  {
+    icon: Database,
+    label: 'Dataset Integrity',
+    desc: 'Detect duplicates, poisoning, and quality anomalies.',
+  },
+  {
+    icon: Cpu,
+    label: 'Model Integrity',
+    desc: 'Cryptographic fingerprinting detects substitution or tampering.',
+  },
+  {
+    icon: GitBranch,
+    label: 'Provenance',
+    desc: 'Cryptographically signed manifests link inputs to outputs.',
+  },
+];
+
+function PillFeature({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
+      border border-[var(--border)] text-2 hover:border-accent hover:text-accent
+      transition-colors duration-150 cursor-default select-none">
+      {label}
+    </span>
+  );
+}
 
 export function Overview() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [caps, setCaps] = useState<CapabilitiesResponse | null>(null);
-  const [error, setError] = useState<{ message: string; isNetwork: boolean } | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    Promise.all([getHealth(), getCapabilities()])
-      .then(([h, c]) => {
-        if (!mounted) return;
-        setHealth(h);
-        setCaps(c);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        setError({ message: err.message, isNetwork: err instanceof NetworkError });
-        setLoading(false);
-      });
-    return () => { mounted = false; };
+    let m = true;
+    Promise.all([getHealth().catch(() => null), getCapabilities().catch(() => null)])
+      .then(([h, c]) => { if (m) { setHealth(h); setCaps(c); } });
+    return () => { m = false; };
   }, []);
 
-  const availableDetectors = caps?.detectors.filter((d) => d.available).length ?? 0;
-  const totalDetectors = caps?.detectors.length ?? 0;
+  const available = caps?.detectors.filter(d => d.available).length ?? 0;
+  const total = caps?.detectors.length ?? 0;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">
-            PRAMAAN Assurance Overview
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Offline integrity assurance for computer vision data, models and inference outputs.
+    <div className="min-h-[calc(100vh-3rem)] flex flex-col">
+      {/* ── Hero ── */}
+      <section className="flex-1 max-w-7xl mx-auto w-full px-6 py-16 md:py-24
+        grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+        {/* Left: Copy */}
+        <div className="flex flex-col gap-6">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-accent" />
+            <span className="label text-accent tracking-widest">PRAMAAN</span>
+          </div>
+
+          {/* Display headline */}
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold leading-[1.05] tracking-tight text-1">
+              Trust AI
+            </h1>
+            <h1 className="text-4xl md:text-5xl font-bold leading-[1.05] tracking-tight">
+              with{' '}
+              <span className="text-accent">Evidence</span>
+            </h1>
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-2 leading-relaxed max-w-sm">
+            PRAMAAN provides independent, evidence-based integrity assessment
+            for AI models, datasets, and inference outputs.
+          </p>
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap gap-2">
+            <PillFeature label="Detect Risks" />
+            <PillFeature label="Generate Evidence" />
+            <PillFeature label="Build Trust" />
+          </div>
+
+          {/* CTAs */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Link
+              to="/new"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded
+                bg-accent text-white text-sm font-semibold
+                hover:bg-[var(--accent-2)] transition-colors duration-150
+                active:scale-[0.97]"
+            >
+              Start an Assessment
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              to="/capabilities"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded
+                border border-[var(--border)] text-1 text-sm font-medium
+                hover:bg-surface-2 transition-colors duration-150"
+            >
+              View Capabilities
+            </Link>
+          </div>
+
+          {/* Tagline */}
+          <p className="text-xs text-3">
+            Transparent AI. Safer Tomorrow.
           </p>
         </div>
-        <Link
-          to="/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors duration-150"
-        >
-          <Plus className="w-4 h-4" />
-          New Assessment
-        </Link>
-      </div>
 
-      {/* Error state */}
-      {error && !loading && (
-        <Panel>
-          <ErrorState
-            message={error.message}
-            isNetwork={error.isNetwork}
-            onRetry={() => window.location.reload()}
-          />
-        </Panel>
-      )}
-
-      {/* Loading skeleton */}
-      {loading && (
-        <div className="space-y-4 animate-pulse">
-          <div className="h-28 rounded-lg bg-[var(--surface-2)]" />
-          <div className="h-40 rounded-lg bg-[var(--surface-2)]" />
-        </div>
-      )}
-
-      {/* Content */}
-      {!loading && !error && (
-        <>
-          {/* System status */}
-          <Panel title="System Status">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Service</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-[var(--risk-none)]" />
-                  <span className="text-sm font-semibold text-[var(--text-primary)] capitalize">
-                    {health?.status ?? '—'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Version</span>
-                <span className="text-sm font-semibold text-[var(--text-primary)]">
-                  v{health?.version ?? '—'}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Detectors</span>
-                <span className="text-sm font-semibold text-[var(--text-primary)]">
-                  {availableDetectors}/{totalDetectors} available
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Formats</span>
-                <span className="text-sm font-semibold text-[var(--text-primary)]">
-                  {caps?.supported_dataset_formats.join(', ') ?? '—'}
-                </span>
-              </div>
-            </div>
-          </Panel>
-
-          {/* What PRAMAAN assures */}
-          <Panel title="Assurance Coverage">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                {
-                  icon: <AlertCircle className="w-5 h-5" />,
-                  label: 'Data Integrity',
-                  description: 'Detects duplicates, near-duplicates, and data quality issues in CV datasets.',
-                },
-                {
-                  icon: <Cpu className="w-5 h-5" />,
-                  label: 'Model Integrity',
-                  description: 'Cryptographic fingerprinting of model artifacts to detect substitution or tampering.',
-                },
-                {
-                  icon: <ShieldCheck className="w-5 h-5" />,
-                  label: 'Inference Provenance',
-                  description: 'Cryptographically signed manifests linking inputs, models, and outputs.',
-                },
-              ].map((item) => (
-                <div key={item.label} className="p-4 rounded-lg bg-[var(--surface-1)] border border-[var(--border)]">
-                  <div className="text-[var(--accent)] mb-2">{item.icon}</div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{item.label}</p>
-                  <p className="mt-1 text-xs text-[var(--text-muted)] leading-relaxed">{item.description}</p>
-                </div>
-              ))}
-            </div>
-          </Panel>
-
-          {/* Available detectors */}
-          {caps && (
-            <Panel
-              title="Active Detectors"
-              description={`${availableDetectors} of ${totalDetectors} available in this environment`}
-              actions={
-                <Link to="/capabilities" className="text-xs text-[var(--accent)] hover:underline">
-                  View all →
-                </Link>
-              }
-            >
-              <div className="space-y-1.5">
-                {caps.detectors.map((d) => (
-                  <div
-                    key={d.detector_id}
-                    className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-[var(--surface-2)] transition-colors duration-150"
-                  >
-                    <div
-                      className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                        d.available ? 'bg-[var(--risk-none)]' : 'bg-[var(--text-muted)]'
-                      }`}
-                    />
-                    <code className="text-[10px] font-mono text-[var(--text-muted)] w-16 flex-shrink-0">
-                      {d.detector_id}
-                    </code>
-                    <span className="text-xs text-[var(--text-primary)] flex-1 truncate">{d.name}</span>
-                    <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0">
-                      {d.available ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          )}
-
-          {/* Assessment history — no list endpoint exists */}
-          <Panel
-            title="Recent Assessments"
-            description="Assessment history is not yet available in this view."
-          >
-            <div className="py-8 flex flex-col items-center gap-2 text-center">
-              <p className="text-sm text-[var(--text-muted)]">No assessment history available.</p>
-              <p className="text-xs text-[var(--text-muted)] max-w-sm">
-                Run an assessment to generate findings. Results are accessible immediately after completion.
-              </p>
-              <Link
-                to="/new"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline"
+        {/* Right: 3D visualization */}
+        <div className="relative flex items-center justify-center h-80 md:h-[480px]">
+          {/* Floating layer labels */}
+          <div className="absolute left-4 md:left-0 flex flex-col gap-6 text-right z-10 pointer-events-none">
+            {[
+              { label: 'Datasets',    top: '15%' },
+              { label: 'Models',      top: '38%' },
+              { label: 'Provenance',  top: '61%' },
+              { label: 'Audit Trail', top: '81%' },
+            ].map(({ label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-2"
+                style={{ marginTop: label === 'Datasets' ? 0 : undefined }}
               >
-                <Plus className="w-3.5 h-3.5" />
-                Run your first assessment
-              </Link>
+                <div className="w-6 h-px bg-accent/40" />
+                <span className="text-[10px] font-semibold tracking-widest uppercase text-accent/70">
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <Suspense fallback={
+            <div className="w-48 h-48 flex items-center justify-center opacity-30">
+              <Shield className="w-16 h-16 text-accent animate-pulse" />
             </div>
-          </Panel>
-        </>
+          }>
+            <IntegrityCore className="w-full h-full" />
+          </Suspense>
+        </div>
+      </section>
+
+      {/* ── Product signals ── */}
+      <section className="border-t border-[var(--border)] bg-surface/50">
+        <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-3 gap-8">
+          {SIGNALS.map(({ icon: Icon, label, desc }) => (
+            <div key={label} className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-8 h-8 rounded flex items-center justify-center
+                bg-[var(--accent-bg)] text-accent">
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-1">{label}</p>
+                <p className="mt-0.5 text-xs text-3 leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Status strip ── */}
+      {(health || caps) && (
+        <div className="border-t border-[var(--border)] bg-surface/30">
+          <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center gap-6 text-xs text-3 flex-wrap">
+            {health && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)] inline-block" />
+                  Service online
+                </span>
+                <span>v{health.version}</span>
+              </>
+            )}
+            {caps && (
+              <span>{available}/{total} detectors available</span>
+            )}
+            {caps && (
+              <span>{caps.supported_dataset_formats.join(' · ')}</span>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
