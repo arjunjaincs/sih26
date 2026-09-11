@@ -9,6 +9,7 @@ import { cn } from '../lib/cn';
 const NAV_LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/new', label: 'Assess' },
+  { to: '/assessments', label: 'History' },
   { to: '/capabilities', label: 'Capabilities' },
 ];
 

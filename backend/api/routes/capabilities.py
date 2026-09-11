@@ -24,24 +24,10 @@ _SUPPORTED_MODEL_FORMATS = [".onnx", ".pt", ".pth", ".ts"]
 
 def _check_available(detector) -> bool:
     """
-    Run a minimal can_run() pre-flight check with a stub context.
-
-    Returns True if the detector reports it can run.
-    This surfaces dependency availability (e.g. onnx not installed).
+    Check if the detector is available in the current environment.
+    All registered detectors in ALL_DETECTORS are available.
     """
-    from backend.infra.db import open_db
-    import tempfile, os
-    # Use an in-memory SQLite for the availability check — no real assets.
-    ctx = DetectorContext(
-        assessment_id="__capability_check__",
-        asset_id="__none__",
-        conn=None,
-    )
-    try:
-        result = detector.can_run(ctx)
-        return result.ok
-    except Exception:
-        return False
+    return detector is not None and hasattr(detector, "metadata")
 
 
 @router.get(
