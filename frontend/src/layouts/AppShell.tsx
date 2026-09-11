@@ -120,14 +120,6 @@ export function AppShell() {
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </motion.span>
             </button>
-
-            {/* CTA */}
-            <Link
-              to="/new"
-              className="px-3.5 py-1.5 rounded bg-accent text-white text-xs font-semibold hover:bg-[var(--accent-2)] transition-colors"
-            >
-              Get Started
-            </Link>
           </div>
         </div>
       </header>

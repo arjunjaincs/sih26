@@ -18,9 +18,9 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING
     set "STOPPED=1"
 )
 
-:: Check & terminate frontend on port 5173
-echo [*] Checking for frontend processes on port 5173...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5173" ^| findstr "LISTENING"') do (
+:: Check & terminate frontend on port 5173 / 5174
+echo [*] Checking for frontend processes on port 5173/5174...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5173 :5174" ^| findstr "LISTENING"') do (
     echo [+] Stopping frontend process [PID: %%a]...
     taskkill /F /PID %%a >nul 2>&1
     set "STOPPED=1"
