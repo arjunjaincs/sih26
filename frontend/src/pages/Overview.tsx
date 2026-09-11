@@ -1,13 +1,9 @@
-import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Shield, Database, Cpu, GitBranch } from 'lucide-react';
 import { getHealth, getCapabilities } from '../api/client';
 import type { HealthResponse, CapabilitiesResponse } from '../types/api';
-
-const IntegrityCore = lazy(() =>
-  import('../components/three/IntegrityCore').then(m => ({ default: m.IntegrityCore }))
-);
+import { HeroComposition } from '../components/HeroComposition';
 
 const SIGNALS = [
   {
@@ -117,36 +113,9 @@ export function Overview() {
           </p>
         </div>
 
-        {/* Right: 3D visualization */}
-        <div className="relative flex items-center justify-center h-80 md:h-[480px]">
-          {/* Floating layer labels */}
-          <div className="absolute left-4 md:left-0 flex flex-col gap-6 text-right z-10 pointer-events-none">
-            {[
-              { label: 'Datasets',    top: '15%' },
-              { label: 'Models',      top: '38%' },
-              { label: 'Provenance',  top: '61%' },
-              { label: 'Audit Trail', top: '81%' },
-            ].map(({ label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-2"
-                style={{ marginTop: label === 'Datasets' ? 0 : undefined }}
-              >
-                <div className="w-6 h-px bg-accent/40" />
-                <span className="text-[10px] font-semibold tracking-widest uppercase text-accent/70">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <Suspense fallback={
-            <div className="w-48 h-48 flex items-center justify-center opacity-30">
-              <Shield className="w-16 h-16 text-accent animate-pulse" />
-            </div>
-          }>
-            <IntegrityCore className="w-full h-full" />
-          </Suspense>
+        {/* Right: Technical Composition */}
+        <div className="relative flex items-center justify-center w-full">
+          <HeroComposition />
         </div>
       </section>
 
