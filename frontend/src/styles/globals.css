@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   PRAMAAN Design System — CSS Custom Properties
+   Light theme is default; .dark overrides are applied when
+   <html class="dark"> is set by ThemeContext.
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --surface-0: #FFFFFF;
+    --surface-1: #F7F8FA;
+    --surface-2: #EEF0F4;
+    --surface-elevated: #FFFFFF;
+
+    /* Borders */
+    --border: #DDE1E9;
+    --border-subtle: #EEF0F4;
+
+    /* Text */
+    --text-primary: #0F1623;
+    --text-secondary: #4B5568;
+    --text-muted: #8C95A6;
+    --text-inverse: #FFFFFF;
+
+    /* Accent */
+    --accent: #1E4DB7;
+    --accent-hover: #1740A0;
+    --accent-light: #EBF0FC;
+    --accent-border: #B8CCEE;
+
+    /* Amber / assurance */
+    --amber: #B45309;
+    --amber-light: #FEF3C7;
+    --amber-border: #FCD34D;
+
+    /* Risk palette */
+    --risk-critical: #DC2626;
+    --risk-critical-bg: #FEF2F2;
+    --risk-high: #EA580C;
+    --risk-high-bg: #FFF7ED;
+    --risk-medium: #D97706;
+    --risk-medium-bg: #FFFBEB;
+    --risk-low: #2563EB;
+    --risk-low-bg: #EFF6FF;
+    --risk-none: #059669;
+    --risk-none-bg: #ECFDF5;
+
+    /* Confidence */
+    --conf-high: #059669;
+    --conf-high-bg: #ECFDF5;
+    --conf-moderate: #D97706;
+    --conf-moderate-bg: #FFFBEB;
+    --conf-low: #DC2626;
+    --conf-low-bg: #FEF2F2;
+
+    /* Status */
+    --status-complete: #059669;
+    --status-failed: #DC2626;
+    --status-running: #2563EB;
+    --status-created: #6B7280;
+
+    /* Scrollbar */
+    --scrollbar-track: var(--surface-1);
+    --scrollbar-thumb: var(--border);
+    --scrollbar-thumb-hover: var(--text-muted);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(15, 22, 35, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(15, 22, 35, 0.08), 0 2px 4px -1px rgba(15, 22, 35, 0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(15, 22, 35, 0.08), 0 4px 6px -2px rgba(15, 22, 35, 0.04);
+
+    /* Sidebar width */
+    --sidebar-width: 224px;
+  }
+
+  .dark {
+    /* Surfaces */
+    --surface-0: #0D1117;
+    --surface-1: #161B22;
+    --surface-2: #1C2330;
+    --surface-elevated: #1C2330;
+
+    /* Borders */
+    --border: #2D3748;
+    --border-subtle: #1C2330;
+
+    /* Text */
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    --text-muted: #6E7681;
+    --text-inverse: #0D1117;
+
+    /* Accent */
+    --accent: #4A9EFF;
+    --accent-hover: #6AB4FF;
+    --accent-light: #1A2F4F;
+    --accent-border: #1E3A5F;
+
+    /* Amber */
+    --amber: #FCD34D;
+    --amber-light: #2D2200;
+    --amber-border: #78350F;
+
+    /* Risk palette (dark) */
+    --risk-critical: #F87171;
+    --risk-critical-bg: #1F0F0F;
+    --risk-high: #FB923C;
+    --risk-high-bg: #1F1208;
+    --risk-medium: #FCD34D;
+    --risk-medium-bg: #1F1800;
+    --risk-low: #60A5FA;
+    --risk-low-bg: #0F1F35;
+    --risk-none: #34D399;
+    --risk-none-bg: #062010;
+
+    /* Confidence */
+    --conf-high: #34D399;
+    --conf-high-bg: #062010;
+    --conf-moderate: #FCD34D;
+    --conf-moderate-bg: #1F1800;
+    --conf-low: #F87171;
+    --conf-low-bg: #1F0F0F;
+
+    /* Status */
+    --status-complete: #34D399;
+    --status-failed: #F87171;
+    --status-running: #60A5FA;
+    --status-created: #6B7280;
+
+    /* Scrollbar */
+    --scrollbar-track: var(--surface-1);
+    --scrollbar-thumb: var(--border);
+    --scrollbar-thumb-hover: #4B5568;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  }
+
+  html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--surface-0);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  /* Focus visible */
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Monospace for hashes */
+  .mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85em;
+    letter-spacing: 0.01em;
+  }
+}
+
+/* ============================================================
+   Utility classes using CSS variables
+   ============================================================ */
+
+@layer utilities {
+  .surface-0 { background-color: var(--surface-0); }
+  .surface-1 { background-color: var(--surface-1); }
+  .surface-2 { background-color: var(--surface-2); }
+  .surface-elevated { background-color: var(--surface-elevated); }
+
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+
+  .border-default { border-color: var(--border); }
+  .border-subtle { border-color: var(--border-subtle); }
+
+  .shadow-card {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
