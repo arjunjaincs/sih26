@@ -325,6 +325,60 @@ class TestAssessmentRetrieval:
 
 
 # ---------------------------------------------------------------------------
+# T4b - Assessment list (GET /api/v1/assessments)
+# ---------------------------------------------------------------------------
+
+class TestAssessmentList:
+    def test_list_returns_200_empty(self, client: TestClient):
+        r = client.get("/api/v1/assessments")
+        assert r.status_code == 200
+
+    def test_list_has_total_and_assessments_fields(self, client: TestClient):
+        body = client.get("/api/v1/assessments").json()
+        assert "total" in body
+        assert "assessments" in body
+        assert isinstance(body["assessments"], list)
+
+    def test_list_reflects_created_assessment(
+        self, client: TestClient, onnx_model: Path
+    ):
+        assess_id = "list-test-001"
+        client.post("/api/v1/assessments", json={
+            "title": "List Test",
+            "assessment_id": assess_id,
+            "model_path": str(onnx_model),
+        })
+        body = client.get("/api/v1/assessments").json()
+        ids = [a["assessment_id"] for a in body["assessments"]]
+        assert assess_id in ids
+
+    def test_list_total_matches_assessments_length(
+        self, client: TestClient, onnx_model: Path
+    ):
+        client.post("/api/v1/assessments", json={
+            "title": "List Count A",
+            "assessment_id": "list-count-a",
+            "model_path": str(onnx_model),
+        })
+        body = client.get("/api/v1/assessments").json()
+        assert body["total"] == len(body["assessments"])
+
+    def test_list_item_has_summary_fields(
+        self, client: TestClient, onnx_model: Path
+    ):
+        assess_id = "list-fields-test"
+        client.post("/api/v1/assessments", json={
+            "title": "Fields Check",
+            "assessment_id": assess_id,
+            "model_path": str(onnx_model),
+        })
+        body = client.get("/api/v1/assessments").json()
+        item = next(a for a in body["assessments"] if a["assessment_id"] == assess_id)
+        for field in ("assessment_id", "title", "status", "findings_count", "evidence_count", "created_at"):
+            assert field in item, f"Missing field: {field}"
+
+
+# ---------------------------------------------------------------------------
 # T5 - Findings
 # ---------------------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 import { useLocation, useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Download, Share2, ChevronRight } from 'lucide-react';
-import type { AssessmentResultSchema } from '../types/api';
+import type { AssessmentResultSchema, AssessmentSummarySchema } from '../types/api';
 import { getAssessment } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
@@ -45,7 +45,13 @@ function MetricPanel({
 /* ────────────────────────────────────────────────────────────
    Detector result row
 ──────────────────────────────────────────────────────────── */
-function DetectorRow({ run, assessmentId }: { run: AssessmentResultSchema['detector_runs'][number]; assessmentId: string }) {
+function DetectorRow({
+  run,
+  assessmentId,
+}: {
+  run: AssessmentResultSchema['detector_runs'][number];
+  assessmentId: string;
+}) {
   const hasFindings = (run.findings_count ?? 0) > 0;
   return (
     <tr className="border-b border-[var(--border)] last:border-0 hover:bg-surface-2 transition-colors group">
@@ -63,9 +69,11 @@ function DetectorRow({ run, assessmentId }: { run: AssessmentResultSchema['detec
         )}
       </td>
       <td className="py-3 pr-4 text-sm text-2">
-        {hasFindings ? `${run.findings_count} finding${run.findings_count === 1 ? '' : 's'}` :
-         !run.applicable ? <span className="text-3 text-xs">no asset provided</span> :
-         <span className="text-3 text-xs">—</span>}
+        {hasFindings
+          ? `${run.findings_count} finding${run.findings_count === 1 ? '' : 's'}`
+          : !run.applicable
+            ? <span className="text-3 text-xs">no asset provided</span>
+            : <span className="text-3 text-xs">—</span>}
       </td>
       <td className="py-3 pr-4 text-right">
         {hasFindings && (
@@ -81,22 +89,120 @@ function DetectorRow({ run, assessmentId }: { run: AssessmentResultSchema['detec
   );
 }
 
+/* ────────────────────────────────────────────────────────────
+   Summary-only view  (direct URL / browser refresh)
+   Shown when full AssessmentResultSchema is not in navigation state.
+   Fetches AssessmentSummarySchema from the backend instead.
+──────────────────────────────────────────────────────────── */
+function SummaryView({ summary }: { summary: AssessmentSummarySchema }) {
+  const id = summary.assessment_id;
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
+      {/* Back */}
+      <Link
+        to="/assessments"
+        className="flex items-center gap-1.5 text-xs text-3 hover:text-1 transition-colors"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Back to Assessments
+      </Link>
+
+      {/* Header */}
+      <div>
+        <p className="label text-accent mb-1">Assessment Record</p>
+        <h1 className="text-2xl font-bold text-1">{summary.title}</h1>
+        <div className="mt-2 flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-3">
+          <span>
+            ID: <code className="font-mono text-2">{summary.assessment_id}</code>
+          </span>
+          {summary.started_at && (
+            <span>Date: {formatDatetime(summary.started_at)}</span>
+          )}
+          {summary.started_at && summary.completed_at && (
+            <span>
+              Duration: {formatDuration(summary.started_at, summary.completed_at)}
+            </span>
+          )}
+          <StatusBadge value={summary.status} variant="status" />
+        </div>
+      </div>
+
+      {/* Counts */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="card p-5 flex flex-col gap-2">
+          <p className="label">Findings</p>
+          <span className="text-3xl font-bold leading-none text-[var(--accent)]">
+            {summary.findings_count}
+          </span>
+          <p className="text-xs text-3">Total findings recorded</p>
+        </div>
+        <div className="card p-5 flex flex-col gap-2">
+          <p className="label">Evidence Items</p>
+          <span className="text-3xl font-bold leading-none text-[var(--accent)]">
+            {summary.evidence_count}
+          </span>
+          <p className="text-xs text-3">Total evidence items collected</p>
+        </div>
+      </div>
+
+      <p className="text-xs text-3 px-1">
+        Full detector run details are only available immediately after completing an assessment.
+        Use the links below to inspect persisted findings, evidence, and audit trail.
+      </p>
+
+      {/* Sub-page links */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[
+          { label: 'Findings', to: `/assessments/${id}/findings` },
+          { label: 'Evidence', to: `/assessments/${id}/evidence` },
+          { label: 'Audit Trail', to: `/assessments/${id}/audit` },
+        ].map(link => (
+          <Link
+            key={link.label}
+            to={link.to}
+            className="flex items-center justify-between px-4 py-2.5 rounded border border-[var(--border)]
+              text-sm text-2 hover:bg-surface-2 hover:text-1 transition-colors group"
+          >
+            {link.label}
+            <ChevronRight className="w-4 h-4 text-3 group-hover:text-accent transition-colors" />
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────
+   Main page component
+──────────────────────────────────────────────────────────── */
 export function AssessmentResult() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+
+  // Full result is passed via navigation state when coming from NewAssessment
   const resultFromNav: AssessmentResultSchema | null = location.state?.result ?? null;
 
-  const resultState = useState<AssessmentResultSchema | null>(resultFromNav);
-  const result = resultState[0];
+  const [result] = useState<AssessmentResultSchema | null>(resultFromNav);
+  const [summary, setSummary] = useState<AssessmentSummarySchema | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(!resultFromNav);
 
   useEffect(() => {
-    if (resultFromNav || !id) return;
+    // If we have the full result from navigation state, skip the API fetch
+    if (resultFromNav || !id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     getAssessment(id)
-      .then(() => setLoading(false))
-      .catch(err => { setError(err.message); setLoading(false); });
+      .then(s => {
+        setSummary(s);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
   }, [id]);
 
   if (loading) {
@@ -109,18 +215,30 @@ export function AssessmentResult() {
     );
   }
 
-  if (error) return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
-      <ErrorState title="Could not load result" message={error} />
-    </div>
-  );
-  if (!result) return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
-      <ErrorState title="No result data" message="Navigate to this page via a completed assessment." />
-    </div>
-  );
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        <ErrorState title="Could not load result" message={error} />
+      </div>
+    );
+  }
 
-  /* Risk color mapping */
+  // Direct URL visit — show the persistent summary view
+  if (!result && summary) return <SummaryView summary={summary} />;
+
+  if (!result) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        <ErrorState
+          title="No result data"
+          message="Navigate to this page via a completed assessment, or open it from the Assessments history."
+        />
+      </div>
+    );
+  }
+
+  /* ── Full result view (navigation state available) ── */
+
   const riskAccent =
     result.overall_risk === 'critical' ? '--risk-critical' :
     result.overall_risk === 'high' ? '--risk-high' :
@@ -140,9 +258,9 @@ export function AssessmentResult() {
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
       {/* Back + actions */}
       <div className="flex items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-1.5 text-xs text-3 hover:text-1 transition-colors">
+        <Link to="/assessments" className="flex items-center gap-1.5 text-xs text-3 hover:text-1 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Results
+          Back to Assessments
         </Link>
         <div className="flex items-center gap-2">
           <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[var(--border)]
@@ -226,8 +344,8 @@ export function AssessmentResult() {
       {result.detectors_skipped.length > 0 && (
         <div className="text-xs text-3 border-t border-[var(--border)] pt-4">
           <span className="label mr-2">Skipped:</span>
-          {result.detectors_skipped.map(id => (
-            <code key={id} className="font-mono text-2 mr-3">{id}</code>
+          {result.detectors_skipped.map(did => (
+            <code key={did} className="font-mono text-2 mr-3">{did}</code>
           ))}
           <span className="text-3">(no applicable asset provided)</span>
         </div>

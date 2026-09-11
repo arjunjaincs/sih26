@@ -234,6 +234,20 @@ class AssessmentSummarySchema(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Assessment list (for GET /api/v1/assessments)
+# ---------------------------------------------------------------------------
+
+class AssessmentListResponse(BaseModel):
+    """
+    Returned by GET /api/v1/assessments.
+    Lists all assessments stored in the local database, most recent first.
+    """
+
+    total: int
+    assessments: list[AssessmentSummarySchema]
+
+
+# ---------------------------------------------------------------------------
 # Finding schema
 # ---------------------------------------------------------------------------
 

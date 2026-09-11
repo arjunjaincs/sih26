@@ -6,6 +6,7 @@
 import type {
   AuditResponse,
   AssessmentCreateRequest,
+  AssessmentListResponse,
   AssessmentResultSchema,
   AssessmentSummarySchema,
   CapabilitiesResponse,
@@ -104,6 +105,10 @@ export function createAssessment(req: AssessmentCreateRequest): Promise<Assessme
 
 export function getAssessment(id: string): Promise<AssessmentSummarySchema> {
   return apiFetch<AssessmentSummarySchema>(`/api/v1/assessments/${encodeURIComponent(id)}`);
+}
+
+export function listAssessments(): Promise<AssessmentListResponse> {
+  return apiFetch<AssessmentListResponse>('/api/v1/assessments');
 }
 
 export function getFindings(id: string): Promise<FindingsResponse> {

@@ -152,6 +152,11 @@ export interface AssessmentSummarySchema {
   evidence_count: number;
 }
 
+export interface AssessmentListResponse {
+  total: number;
+  assessments: AssessmentSummarySchema[];
+}
+
 // ---------------------------------------------------------------------------
 // Findings
 // ---------------------------------------------------------------------------

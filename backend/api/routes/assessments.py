@@ -40,6 +40,7 @@ from backend.api.errors import (
 )
 from backend.api.schemas import (
     AssessmentCreateRequest,
+    AssessmentListResponse,
     AssessmentResultSchema,
     AssessmentSummarySchema,
     AuditEventSchema,
@@ -55,6 +56,7 @@ from backend.assessment.models import AssessmentRequest
 from backend.audit.verifier import ChainVerifier
 from backend.domain.enums import AssessmentState, DatasetFormat
 from backend.infra.db import (
+    AssessmentRepository,
     AuditPayloadRepository,
     AuditRepository,
     EvidenceRepository,
@@ -276,6 +278,47 @@ def create_assessment(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/assessments
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments",
+    response_model=AssessmentListResponse,
+    summary="List all persisted assessments",
+)
+def list_assessments(
+    conn: DbDep,
+) -> AssessmentListResponse:
+    """
+    Return all assessments stored in the local SQLite database, most recent first.
+
+    Each item is an AssessmentSummarySchema with persisted findings/evidence counts.
+    Returns an empty list when no assessments have been run yet.
+    """
+    records = AssessmentRepository(conn).list_all()
+    summaries: list[AssessmentSummarySchema] = []
+    for record in records:
+        findings = FindingRepository(conn).list_by_assessment(record.assessment_id)
+        evidence_count = sum(
+            len(EvidenceRepository(conn).list_by_finding(f.finding_id))
+            for f in findings
+        )
+        summaries.append(AssessmentSummarySchema(
+            assessment_id=record.assessment_id,
+            title=record.title,
+            status=record.state.value,
+            software_version=record.software_version or "",
+            created_at=record.created_at.isoformat() if record.created_at else "",
+            started_at=record.started_at.isoformat() if record.started_at else None,
+            completed_at=record.completed_at.isoformat() if record.completed_at else None,
+            error=record.error,
+            findings_count=len(findings),
+            evidence_count=evidence_count,
+        ))
+    return AssessmentListResponse(total=len(summaries), assessments=summaries)
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/assessments/{assessment_id}
 # ---------------------------------------------------------------------------
 
@@ -293,7 +336,6 @@ def get_assessment(
 
     Returns 404 if the assessment_id does not exist.
     """
-    from backend.infra.db import AssessmentRepository
     record = AssessmentRepository(conn).get(assessment_id)
     if record is None:
         raise AssessmentNotFound(assessment_id)
