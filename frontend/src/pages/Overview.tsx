@@ -9,7 +9,7 @@ const SIGNALS = [
   {
     icon: Database,
     label: 'Dataset Integrity',
-    desc: 'Detect duplicates, poisoning, and quality anomalies.',
+    desc: 'Detect duplicate images, near-duplicates, and dataset format anomalies.',
   },
   {
     icon: Cpu,

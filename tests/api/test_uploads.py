@@ -190,3 +190,80 @@ class TestAssetUploads:
         )
         assert response.status_code == 201
         assert response.json()["title"] == "Local Path Test"
+
+    def test_assessment_using_uploaded_dataset_zip_asset_id(
+        self,
+        client: TestClient,
+    ):
+        from PIL import Image
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w") as zf:
+            img1 = Image.new("RGB", (64, 64), color=(255, 0, 0))
+            b1 = io.BytesIO()
+            img1.save(b1, format="JPEG")
+            zf.writestr("img_01.jpg", b1.getvalue())
+            zf.writestr("img_01_dup.jpg", b1.getvalue())  # Duplicate pair
+
+        up_res = client.post(
+            "/api/v1/uploads",
+            files={"file": ("dataset.zip", zip_buf.getvalue(), "application/zip")},
+            data={"asset_type": "dataset"},
+        )
+        assert up_res.status_code == 201
+        ds_asset_id = up_res.json()["asset_id"]
+
+        asmt_res = client.post(
+            "/api/v1/assessments",
+            json={
+                "title": "Dataset Assessment E2E",
+                "dataset_asset_id": ds_asset_id,
+            },
+        )
+        assert asmt_res.status_code == 201
+        data = asmt_res.json()
+        assert data["title"] == "Dataset Assessment E2E"
+        assert data["findings_count"] > 0
+        di01_runs = [r for r in data["detector_runs"] if "di01" in r["detector_id"].lower()]
+        assert len(di01_runs) == 1
+        assert di01_runs[0]["ran"] is True
+
+    def test_upload_zip_slip_rejected(self, client: TestClient):
+        # Create a malicious archive attempting traversal via ../
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w") as zf:
+            zf.writestr("../../evil.txt", b"evil content")
+
+        response = client.post(
+            "/api/v1/uploads",
+            files={"file": ("malicious.zip", zip_buf.getvalue(), "application/zip")},
+            data={"asset_type": "dataset"},
+        )
+        assert response.status_code == 422
+        body = response.json()
+        assert "path_traversal" in str(body)
+
+    def test_upload_oversized_model_rejected(self, client: TestClient, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("PRAMAAN_MAX_MODEL_SIZE_MB", "1")
+        huge_content = b"x" * (2 * 1024 * 1024)  # 2 MB exceeds 1 MB limit
+        response = client.post(
+            "/api/v1/uploads",
+            files={"file": ("oversized.onnx", huge_content, "application/octet-stream")},
+            data={"asset_type": "model"},
+        )
+        assert response.status_code == 422
+        body = response.json()
+        assert "file_too_large" in str(body)
+
+    def test_upload_response_never_leaks_server_paths(self, client: TestClient, onnx_model: Path):
+        response = client.post(
+            "/api/v1/uploads",
+            files={"file": ("clean.onnx", onnx_model.read_bytes(), "application/octet-stream")},
+            data={"asset_type": "model"},
+        )
+        assert response.status_code == 201
+        body_str = response.text
+        assert "storage_path" not in body_str
+        assert "data\\blobs" not in body_str
+        assert "data/blobs" not in body_str
+        assert "C:\\" not in body_str
+
