@@ -69,6 +69,25 @@ class CapabilitiesResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Upload response schema
+# ---------------------------------------------------------------------------
+
+class UploadResponse(BaseModel):
+    """Response returned when an asset file is uploaded successfully."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    asset_id: str = Field(description="Unique asset identifier for assessment use")
+    original_filename: str = Field(description="Original client-supplied filename")
+    sha256: str = Field(description="SHA-256 hex digest of the asset content")
+    size_bytes: int = Field(ge=0, description="Size of the asset in bytes")
+    asset_type: str = Field(description="'model' or 'dataset'")
+    format: str | None = Field(default=None, description="Inferred or validated format")
+    content_type: str | None = Field(default=None, description="Reported MIME type")
+    created_at: str = Field(description="ISO 8601 registration timestamp")
+
+
+# ---------------------------------------------------------------------------
 # Assessment request schema (incoming)
 # ---------------------------------------------------------------------------
 
@@ -76,12 +95,10 @@ class AssessmentCreateRequest(BaseModel):
     """
     JSON body for POST /api/v1/assessments.
 
-    All paths must be absolute paths on the local filesystem.
-    The API validates them against trusted roots and size limits
-    before passing to AssessmentService.
+    Assets may be specified via local filesystem paths (advanced/air-gapped)
+    OR via uploaded asset_ids returned by POST /api/v1/uploads.
 
-    At least one of dataset_path, model_path, or provenance_manifest_path
-    must be present.
+    At least one dataset or model asset must be present.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -97,6 +114,10 @@ class AssessmentCreateRequest(BaseModel):
         default=None,
         description="Absolute path to image directory or COCO JSON file",
     )
+    dataset_asset_id: str | None = Field(
+        default=None,
+        description="Asset identifier from POST /api/v1/uploads",
+    )
     dataset_format: str | None = Field(
         default=None,
         description="'image_dir' or 'coco_json'",
@@ -106,6 +127,10 @@ class AssessmentCreateRequest(BaseModel):
     model_path: str | None = Field(
         default=None,
         description="Absolute path to .onnx / .pt / .pth model file",
+    )
+    model_asset_id: str | None = Field(
+        default=None,
+        description="Asset identifier from POST /api/v1/uploads",
     )
     model_reference_fingerprint: dict[str, Any] | None = Field(
         default=None,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { getHealth, getCapabilities, createAssessment, ApiError, NetworkError } from '../api/client';
+import { getHealth, getCapabilities, createAssessment, uploadAsset, ApiError, NetworkError } from '../api/client';
 
 // Minimal fetch mock helpers
 function mockFetch(body: unknown, status = 200) {
@@ -89,6 +89,37 @@ describe('API client', () => {
     it('throws ApiError on 422 validation error', async () => {
       mockFetch({ error: 'invalid_request', message: 'At least one asset required.' }, 422);
       await expect(createAssessment({ title: 'Test' })).rejects.toBeInstanceOf(ApiError);
+    });
+  });
+
+  describe('uploadAsset', () => {
+    it('sends POST multipart request and returns UploadResponse', async () => {
+      const mockUploadRes = {
+        asset_id: 'ast-12345',
+        original_filename: 'model.onnx',
+        size_bytes: 1024,
+        sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        format: 'onnx',
+        asset_type: 'model',
+        uploaded_at: '2026-09-11T12:00:00Z',
+      };
+      const fetchSpy = mockFetch(mockUploadRes, 201);
+      const testFile = new File(['fake-onnx-bytes'], 'model.onnx', { type: 'application/octet-stream' });
+      const result = await uploadAsset(testFile, 'model');
+
+      expect(result.asset_id).toBe('ast-12345');
+      expect(result.original_filename).toBe('model.onnx');
+      expect(result.sha256).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/uploads'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('throws ApiError on upload rejection', async () => {
+      mockFetch({ detail: { error: 'invalid_format', message: 'Unsupported file format: .exe' } }, 422);
+      const testFile = new File(['bad-bytes'], 'malware.exe');
+      await expect(uploadAsset(testFile)).rejects.toBeInstanceOf(ApiError);
     });
   });
 

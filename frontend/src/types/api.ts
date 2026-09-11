@@ -44,6 +44,21 @@ export interface CapabilitiesResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Upload response
+// ---------------------------------------------------------------------------
+
+export interface UploadResponse {
+  asset_id: string;
+  original_filename: string;
+  sha256: string;
+  size_bytes: number;
+  asset_type: 'model' | 'dataset';
+  format?: string | null;
+  content_type?: string | null;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
 // Assessment request
 // ---------------------------------------------------------------------------
 
@@ -51,8 +66,10 @@ export interface AssessmentCreateRequest {
   title: string;
   assessment_id?: string | null;
   dataset_path?: string | null;
+  dataset_asset_id?: string | null;
   dataset_format?: string | null; // 'image_dir' | 'coco_json'
   model_path?: string | null;
+  model_asset_id?: string | null;
   model_reference_fingerprint?: Record<string, unknown> | null;
   phash_threshold?: number; // 0–64, default 10
   dhash_threshold?: number; // 0–64, default 10

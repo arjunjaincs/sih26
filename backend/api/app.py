@@ -22,6 +22,7 @@ from backend.api.errors import register_exception_handlers
 from backend.api.routes.assessments import router as assessments_router
 from backend.api.routes.capabilities import router as capabilities_router
 from backend.api.routes.health import router as health_router
+from backend.api.routes.uploads import router as uploads_router
 
 _PRAMAAN_VERSION = "1.0.0"
 
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     application.include_router(health_router)
     application.include_router(capabilities_router)
     application.include_router(assessments_router)
+    application.include_router(uploads_router)
 
     return application
 

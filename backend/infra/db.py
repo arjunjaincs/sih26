@@ -17,6 +17,7 @@ Design choices:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import sqlite3
 from pathlib import Path
@@ -205,6 +206,21 @@ CREATE INDEX IF NOT EXISTS idx_audit_assessment
     ON audit_events(assessment_id);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp
     ON audit_events(timestamp_utc);
+
+CREATE TABLE IF NOT EXISTS uploads (
+    upload_id           TEXT PRIMARY KEY,
+    asset_type          TEXT NOT NULL,
+    original_filename   TEXT NOT NULL,
+    safe_filename       TEXT NOT NULL,
+    sha256              TEXT NOT NULL,
+    size_bytes          INTEGER NOT NULL,
+    content_type        TEXT,
+    storage_path        TEXT NOT NULL,
+    format              TEXT,
+    created_at          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_uploads_created_at
+    ON uploads(created_at);
 """
 
 
@@ -937,3 +953,91 @@ class AuditPayloadRepository:
             event_ids,
         ).fetchall()
         return {r["event_id"]: json.loads(r["payload_json"]) for r in rows}
+
+
+# ---------------------------------------------------------------------------
+# Upload repository
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class UploadRecord:
+    upload_id: str
+    asset_type: str
+    original_filename: str
+    safe_filename: str
+    sha256: str
+    size_bytes: int
+    content_type: str | None
+    storage_path: str
+    format: str | None
+    created_at: str
+
+
+class UploadRepository:
+    """CRUD for Upload records."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self._conn = conn
+
+    def insert(self, u: UploadRecord) -> None:
+        self._conn.execute(
+            """
+            INSERT INTO uploads
+                (upload_id, asset_type, original_filename, safe_filename,
+                 sha256, size_bytes, content_type, storage_path, format, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                u.upload_id,
+                u.asset_type,
+                u.original_filename,
+                u.safe_filename,
+                u.sha256,
+                u.size_bytes,
+                u.content_type,
+                u.storage_path,
+                u.format,
+                u.created_at,
+            ),
+        )
+        self._conn.commit()
+
+    def get(self, upload_id: str) -> UploadRecord | None:
+        row = self._conn.execute(
+            "SELECT * FROM uploads WHERE upload_id=?", (upload_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return UploadRecord(
+            upload_id=row["upload_id"],
+            asset_type=row["asset_type"],
+            original_filename=row["original_filename"],
+            safe_filename=row["safe_filename"],
+            sha256=row["sha256"],
+            size_bytes=row["size_bytes"],
+            content_type=row["content_type"],
+            storage_path=row["storage_path"],
+            format=row["format"],
+            created_at=row["created_at"],
+        )
+
+    def list_recent(self, limit: int = 50) -> list[UploadRecord]:
+        rows = self._conn.execute(
+            "SELECT * FROM uploads ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [
+            UploadRecord(
+                upload_id=r["upload_id"],
+                asset_type=r["asset_type"],
+                original_filename=r["original_filename"],
+                safe_filename=r["safe_filename"],
+                sha256=r["sha256"],
+                size_bytes=r["size_bytes"],
+                content_type=r["content_type"],
+                storage_path=r["storage_path"],
+                format=r["format"],
+                created_at=r["created_at"],
+            )
+            for r in rows
+        ]
+

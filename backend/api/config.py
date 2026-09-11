@@ -85,6 +85,17 @@ class _Config:
         return _get_db_path()
 
     @property
+    def blob_dir(self) -> Path:
+        raw = os.environ.get("PRAMAAN_BLOB_DIR", "")
+        if raw:
+            p = Path(raw)
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+        p = self.db_path.parent / "blobs"
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    @property
     def cors_origins(self) -> list[str]:
         return _get_cors_origins()
 

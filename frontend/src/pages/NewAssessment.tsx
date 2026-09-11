@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, X } from 'lucide-react';
 import { createAssessment, getCapabilities } from '../api/client';
-import type { CapabilitiesResponse, AssessmentResultSchema, DetectorCapabilitySchema } from '../types/api';
+import type { CapabilitiesResponse, AssessmentResultSchema, DetectorCapabilitySchema, UploadResponse, AssessmentCreateRequest } from '../types/api';
+import { FileUpload } from '../components/FileUpload';
 import { cn } from '../lib/cn';
 
 type Stage = 'form' | 'running' | 'error';
@@ -105,13 +106,59 @@ function DetectorRow({ d }: { d: DetectorCapabilitySchema }) {
   );
 }
 
+function ModeSelector({
+  mode,
+  onChange,
+}: {
+  mode: 'upload' | 'local';
+  onChange: (m: 'upload' | 'local') => void;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-md border border-[var(--border)] bg-surface-2 p-0.5 text-xs">
+      <button
+        type="button"
+        onClick={() => onChange('upload')}
+        className={cn(
+          'px-2.5 py-1 rounded font-medium transition-colors text-[11px]',
+          mode === 'upload'
+            ? 'bg-surface text-1 shadow-sm'
+            : 'text-3 hover:text-2',
+        )}
+      >
+        Upload File
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('local')}
+        className={cn(
+          'px-2.5 py-1 rounded font-medium transition-colors text-[11px]',
+          mode === 'local'
+            ? 'bg-surface text-1 shadow-sm'
+            : 'text-3 hover:text-2',
+        )}
+      >
+        Local Path (Advanced)
+      </button>
+    </div>
+  );
+}
+
 export function NewAssessment() {
   const navigate = useNavigate();
   const [stage, setStage] = useState<Stage>('form');
   const [title, setTitle] = useState('');
+
+  // Model input states
+  const [modelMode, setModelMode] = useState<'upload' | 'local'>('upload');
+  const [uploadedModel, setUploadedModel] = useState<UploadResponse | null>(null);
   const [modelPath, setModelPath] = useState('');
+
+  // Dataset input states
+  const [datasetMode, setDatasetMode] = useState<'upload' | 'local'>('upload');
+  const [uploadedDataset, setUploadedDataset] = useState<UploadResponse | null>(null);
   const [datasetPath, setDatasetPath] = useState('');
   const [datasetFormat, setDatasetFormat] = useState('image_dir');
+
   const [provenancePath, setProvenancePath] = useState('');
   const [caps, setCaps] = useState<CapabilitiesResponse | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -126,7 +173,13 @@ export function NewAssessment() {
   function validate() {
     const e: string[] = [];
     if (!title.trim()) e.push('Assessment title is required.');
-    if (!modelPath.trim() && !datasetPath.trim()) e.push('Provide at least one asset path.');
+
+    const hasModel = modelMode === 'upload' ? !!uploadedModel : !!modelPath.trim();
+    const hasDataset = datasetMode === 'upload' ? !!uploadedDataset : !!datasetPath.trim();
+
+    if (!hasModel && !hasDataset && !provenancePath.trim()) {
+      e.push('Provide at least one model or dataset asset.');
+    }
     return e;
   }
 
@@ -155,12 +208,16 @@ export function NewAssessment() {
     startPipelineAnimation();
 
     try {
-      const result: AssessmentResultSchema = await createAssessment({
+      const payload: AssessmentCreateRequest = {
         title: title.trim(),
-        dataset_path: datasetPath.trim() || null,
-        dataset_format: datasetPath.trim() ? datasetFormat : null,
-        model_path: modelPath.trim() || null,
-      });
+        model_asset_id: modelMode === 'upload' && uploadedModel ? uploadedModel.asset_id : null,
+        model_path: modelMode === 'local' && modelPath.trim() ? modelPath.trim() : null,
+        dataset_asset_id: datasetMode === 'upload' && uploadedDataset ? uploadedDataset.asset_id : null,
+        dataset_path: datasetMode === 'local' && datasetPath.trim() ? datasetPath.trim() : null,
+        dataset_format: datasetMode === 'upload' && uploadedDataset ? (uploadedDataset.format || null) : (datasetPath.trim() ? datasetFormat : null),
+      };
+
+      const result: AssessmentResultSchema = await createAssessment(payload);
       stopPipeline();
       sessionStorage.setItem('pramaan_last_assessment_id', result.assessment_id);
       navigate(`/assessments/${result.assessment_id}/result`, { state: { result } });
@@ -276,53 +333,89 @@ export function NewAssessment() {
               helpText="A descriptive name for this assessment."
             />
 
-            {/* Divider */}
-            <div className="pt-1">
-              <p className="label mb-3">Model File (ONNX / PyTorch)</p>
-              <div className="relative">
-                <input
-                  id="model_path"
-                  type="text"
-                  value={modelPath}
-                  onChange={e => setModelPath(e.target.value)}
-                  placeholder="Select model file (optional)"
-                  className={cn(
-                    'w-full h-9 px-3 pr-8 rounded border border-[var(--border)] bg-surface text-1 text-sm placeholder:text-4',
-                    'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30',
-                    'transition-colors duration-150',
-                  )}
-                />
-                {modelPath && (
-                  <button type="button" onClick={() => setModelPath('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-3 hover:text-1">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+            {/* Model Section */}
+            <div className="pt-1 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="label">Model File (ONNX / PyTorch)</label>
+                <ModeSelector mode={modelMode} onChange={setModelMode} />
               </div>
-              <p className="mt-1 text-[11px] text-3">Absolute path to a .onnx or .pt/.pth model file.</p>
+
+              {modelMode === 'upload' ? (
+                <FileUpload
+                  id="model-upload"
+                  assetType="model"
+                  accept=".onnx,.pt,.pth"
+                  value={uploadedModel}
+                  onChange={setUploadedModel}
+                  helpText="Supported formats: .onnx, .pt, .pth (Air-gapped safe staging & SHA-256 verified)"
+                />
+              ) : (
+                <div>
+                  <div className="relative">
+                    <input
+                      id="model_path"
+                      type="text"
+                      value={modelPath}
+                      onChange={e => setModelPath(e.target.value)}
+                      placeholder="e.g. C:/models/classifier.onnx"
+                      className={cn(
+                        'w-full h-9 px-3 pr-8 rounded border border-[var(--border)] bg-surface text-1 text-sm placeholder:text-4',
+                        'focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30',
+                        'transition-colors duration-150',
+                      )}
+                    />
+                    {modelPath && (
+                      <button type="button" onClick={() => setModelPath('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-3 hover:text-1">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[11px] text-3">Absolute path to a .onnx or .pt/.pth model file on this machine.</p>
+                </div>
+              )}
             </div>
 
-            <div className="border-t border-[var(--border)] pt-5 space-y-4">
-              <p className="label">Dataset (Images, CSV, etc.)</p>
-              <Field
-                label=""
-                id="dataset_path"
-                value={datasetPath}
-                onChange={setDatasetPath}
-                placeholder="Select dataset (optional)"
-                onClear={() => setDatasetPath('')}
-              />
-              {datasetPath && (
-                <Select
-                  label="Format"
-                  id="dataset_format"
-                  value={datasetFormat}
-                  onChange={setDatasetFormat}
-                  options={[
-                    { value: 'image_dir', label: 'Image Directory' },
-                    { value: 'coco_json', label: 'COCO JSON' },
-                  ]}
+            {/* Dataset Section */}
+            <div className="border-t border-[var(--border)] pt-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="label">Dataset (Images, Archive, or Manifest)</label>
+                <ModeSelector mode={datasetMode} onChange={setDatasetMode} />
+              </div>
+
+              {datasetMode === 'upload' ? (
+                <FileUpload
+                  id="dataset-upload"
+                  assetType="dataset"
+                  accept=".zip,.json,.jpg,.jpeg,.png"
+                  value={uploadedDataset}
+                  onChange={setUploadedDataset}
+                  helpText="Supported formats: .zip archive (extracted securely), .json (COCO manifest), or image files"
                 />
+              ) : (
+                <div className="space-y-4">
+                  <Field
+                    label=""
+                    id="dataset_path"
+                    value={datasetPath}
+                    onChange={setDatasetPath}
+                    placeholder="e.g. C:/datasets/val2017 or C:/datasets/instances.json"
+                    onClear={() => setDatasetPath('')}
+                    helpText="Absolute directory path or manifest path on this machine."
+                  />
+                  {datasetPath && (
+                    <Select
+                      label="Format"
+                      id="dataset_format"
+                      value={datasetFormat}
+                      onChange={setDatasetFormat}
+                      options={[
+                        { value: 'image_dir', label: 'Image Directory' },
+                        { value: 'coco_json', label: 'COCO JSON' },
+                      ]}
+                    />
+                  )}
+                </div>
               )}
             </div>
 

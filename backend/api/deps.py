@@ -19,7 +19,8 @@ from fastapi import Depends
 
 from backend.api.config import settings
 from backend.assessment.orchestrator import AssessmentService
-from backend.infra.db import open_db
+from backend.infra.blob_store import BlobStore
+from backend.infra.db import UploadRepository, open_db
 
 
 # ---------------------------------------------------------------------------
@@ -53,3 +54,28 @@ def get_service(conn: DbDep) -> AssessmentService:
 
 
 ServiceDep = Annotated[AssessmentService, Depends(get_service)]
+
+
+# ---------------------------------------------------------------------------
+# BlobStore dependency
+# ---------------------------------------------------------------------------
+
+def get_blob_store() -> BlobStore:
+    """Provide a BlobStore configured to the active blob directory."""
+    return BlobStore(settings.blob_dir)
+
+
+BlobStoreDep = Annotated[BlobStore, Depends(get_blob_store)]
+
+
+# ---------------------------------------------------------------------------
+# Upload repository dependency
+# ---------------------------------------------------------------------------
+
+def get_upload_repo(conn: DbDep) -> UploadRepository:
+    """Provide an UploadRepository instance using the request's DB connection."""
+    return UploadRepository(conn)
+
+
+UploadRepoDep = Annotated[UploadRepository, Depends(get_upload_repo)]
+

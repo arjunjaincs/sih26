@@ -12,6 +12,7 @@ import type {
   EvidenceResponse,
   FindingsResponse,
   HealthResponse,
+  UploadResponse,
 } from '../types/api';
 
 // ---------------------------------------------------------------------------
@@ -116,3 +117,47 @@ export function getEvidence(id: string): Promise<EvidenceResponse> {
 export function getAudit(id: string): Promise<AuditResponse> {
   return apiFetch<AuditResponse>(`/api/v1/assessments/${encodeURIComponent(id)}/audit`);
 }
+
+export async function uploadAsset(
+  file: File,
+  assetType?: 'model' | 'dataset',
+): Promise<UploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (assetType) {
+    formData.append('asset_type', assetType);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}/api/v1/uploads`, {
+      method: 'POST',
+      body: formData,
+    });
+  } catch (err) {
+    throw new NetworkError(err);
+  }
+
+  if (!response.ok) {
+    let code = 'upload_error';
+    let message = `HTTP ${response.status}`;
+    let detail: string | undefined;
+    try {
+      const body = await response.json() as { error?: string; message?: string; detail?: string | { error?: string; message?: string } };
+      if (typeof body.detail === 'object' && body.detail !== null) {
+        code = body.detail.error ?? code;
+        message = body.detail.message ?? message;
+      } else {
+        code = body.error ?? code;
+        message = body.message ?? message;
+        detail = typeof body.detail === 'string' ? body.detail : undefined;
+      }
+    } catch {
+      message = response.statusText || message;
+    }
+    throw new ApiError(response.status, code, message, detail);
+  }
+
+  return response.json() as Promise<UploadResponse>;
+}
+

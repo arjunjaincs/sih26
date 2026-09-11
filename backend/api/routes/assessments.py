@@ -28,11 +28,11 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from backend.api.config import settings
-from backend.api.deps import DbDep, ServiceDep
+from backend.api.deps import DbDep, ServiceDep, UploadRepoDep
 from backend.api.errors import (
     AssessmentNotFound,
     InvalidAssetPath,
@@ -161,16 +161,18 @@ def _parse_dataset_format(raw: str | None) -> DatasetFormat | None:
 def create_assessment(
     body: AssessmentCreateRequest,
     service: ServiceDep,
+    upload_repo: UploadRepoDep,
 ) -> AssessmentResultSchema:
     """
-    Run a new assessment against local assets.
+    Run a new assessment against local assets or uploaded assets.
 
     The request must supply at least one of:
-      - dataset_path (image directory or COCO JSON file)
-      - model_path (.onnx / .pt / .pth file)
+      - dataset_path or dataset_asset_id
+      - model_path or model_asset_id
 
     All paths are validated for existence, size, and trusted-root
     membership before being passed to the assessment engine.
+    Uploaded assets are verified from the secure UploadRepository.
 
     The response is the complete AssessmentResult produced by
     AssessmentService.run_assessment() — including per-detector runs,
@@ -179,20 +181,54 @@ def create_assessment(
     # --- Validate and resolve paths ---
     dataset_path: Path | None = None
     model_path: Path | None = None
+    dataset_format = _parse_dataset_format(body.dataset_format)
 
-    if body.dataset_path is not None:
+    # 1. Resolve dataset
+    if body.dataset_asset_id:
+        upload = upload_repo.get(body.dataset_asset_id)
+        if not upload or upload.asset_type != "dataset":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "invalid_asset_id", "message": f"Dataset asset ID not found: {body.dataset_asset_id!r}"},
+            )
+        resolved_ds = Path(upload.storage_path)
+        if not resolved_ds.exists():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "asset_missing", "message": "Uploaded dataset file is missing from storage."},
+            )
+        dataset_path = resolved_ds
+        if dataset_format is None and upload.format:
+            try:
+                dataset_format = _parse_dataset_format(upload.format)
+            except Exception:
+                pass
+    elif body.dataset_path is not None:
         dataset_path = _validate_asset_path(
             body.dataset_path,
             max_size_mb=settings.max_dataset_size_mb * 1000,  # directory: no per-dir limit
         )
 
-    if body.model_path is not None:
+    # 2. Resolve model
+    if body.model_asset_id:
+        upload = upload_repo.get(body.model_asset_id)
+        if not upload or upload.asset_type != "model":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "invalid_asset_id", "message": f"Model asset ID not found: {body.model_asset_id!r}"},
+            )
+        resolved_model = Path(upload.storage_path)
+        if not resolved_model.exists():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "asset_missing", "message": "Uploaded model file is missing from storage."},
+            )
+        model_path = resolved_model
+    elif body.model_path is not None:
         model_path = _validate_asset_path(
             body.model_path,
             max_size_mb=settings.max_model_size_mb,
         )
-
-    dataset_format = _parse_dataset_format(body.dataset_format)
 
     # --- Build AssessmentRequest ---
     assess_id = body.assessment_id or str(uuid.uuid4())
@@ -211,8 +247,6 @@ def create_assessment(
     # --- Fail fast on domain-level validation (returns 422, not 201) ---
     validation_errors = request.validate()
     if validation_errors:
-        from backend.api.errors import InvalidAssetPath
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
