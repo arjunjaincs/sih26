@@ -1,0 +1,39 @@
+{
+  "manifest_id": "09090909-0000-0000-0000-000000000001",
+  "manifest_version": "1",
+  "assessment_id": "stream-09-limit",
+  "input_sha256": "567e3611094b537115a14c3a314014e8dfcb2b6e993ede8b2da85be93f200849",
+  "model_sha256": "552b0a6a1a401c960c584f121ac14d85e87443fcd3733930ce38d15aa5f4af9e",
+  "preprocessing_config": {
+    "resize": [
+      224,
+      224
+    ],
+    "normalization": {
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    },
+    "color_mode": "RGB"
+  },
+  "inference_config": {
+    "batch_size": 1,
+    "precision": "fp32",
+    "device": "cpu",
+    "execution_provider": "CPUExecutionProvider"
+  },
+  "output_sha256": "c4965dc9e48b1e63f5391eeb572ca95e0bceedf170d0c4d71ddef83e7d5a8596",
+  "timestamp_utc": "2026-01-01T12:00:00Z",
+  "nonce": "9191919191919191919191919191919191919191919191919191919191919191",
+  "sequence": 0,
+  "pramaan_version": "1.0.0",
+  "digest": "98aa3b63aadc4d043b16630a5769aff1882e6f8c5b9da1a4306ee6ef0f9fa334",
+  "signature": "f5344d1a98a6a0850b28e14536046be34583908c480936a801171bef3aedc2cdbbe1f77bd643183a6e6bc9dfd5c63ea944f52c1d5ebbc6dc2fd49eb3cfe53800"
+}

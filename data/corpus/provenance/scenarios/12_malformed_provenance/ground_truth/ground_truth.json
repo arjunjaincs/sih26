@@ -1,0 +1,9 @@
+{
+  "scenario_id": "12_malformed_provenance",
+  "name": "Corrupted / Malformed Payload",
+  "category": "malformed_unsupported",
+  "expected_overall_risk": "NONE",
+  "expected_disposition": "FAIL_CLOSED",
+  "expected_can_run_ok": false,
+  "description": "Unsigned or corrupted manifest payload fails closed safely without leaking file paths or raising stack traces."
+}

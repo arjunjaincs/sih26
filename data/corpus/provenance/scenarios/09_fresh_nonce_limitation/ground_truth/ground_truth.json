@@ -1,0 +1,14 @@
+{
+  "scenario_id": "09_fresh_nonce_limitation",
+  "name": "Fresh Nonce Duplicate Inference",
+  "category": "documented_limitation",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "provenance_valid"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "VERIFIED",
+  "documented_limitation": "Cryptographic replay detection alone cannot prove semantic duplicate inference when an actor issues a fresh nonce and valid sequence counter (ADR-003).",
+  "description": "Logically identical inference with fresh nonce is not detectable by cryptographic replay detection alone."
+}

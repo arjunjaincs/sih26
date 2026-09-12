@@ -1,0 +1,5 @@
+{
+  "scenario_id": "09_fresh_nonce_limitation",
+  "candidate_manifest_id": "09090909-0000-0000-0000-000000000002",
+  "is_limitation_scenario": true
+}

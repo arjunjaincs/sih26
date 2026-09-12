@@ -1,0 +1,6 @@
+{
+  "scenario_id": "02_input_tampering",
+  "manifest_id": "02020202-0000-0000-0000-000000000002",
+  "bound_input_sha256": "567e3611094b537115a14c3a314014e8dfcb2b6e993ede8b2da85be93f200849",
+  "actual_input_sha256": "768d37ee36a2a377b8a2549863aa1a21eb6485b2d35686462a0cffa42d28e73a"
+}

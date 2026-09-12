@@ -1,0 +1,14 @@
+{
+  "scenario_id": "10_audit_integration",
+  "name": "End-to-End Audit Trail Integration",
+  "category": "audit_integration",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "provenance_valid"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_audit_chain_valid": true,
+  "expected_disposition": "VERIFIED",
+  "description": "Assessment completes with verified provenance, persisting evidence and maintaining a valid audit chain."
+}

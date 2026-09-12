@@ -153,6 +153,28 @@ class AssessmentCreateRequest(BaseModel):
     dhash_threshold: int = Field(default=10, ge=0, le=64)
     min_cluster_size: int = Field(default=2, ge=2)
 
+    # Provenance
+    provenance_manifest: dict[str, Any] | None = Field(
+        default=None,
+        description="Signed ProvenanceManifest payload for inference provenance assurance",
+    )
+    provenance_public_key_hex: str | None = Field(
+        default=None,
+        description="Hex-encoded 32-byte Ed25519 public key for provenance verification",
+    )
+    actual_input_bytes_hex: str | None = Field(
+        default=None,
+        description="Optional hex-encoded input bytes fed to model for input binding check",
+    )
+    actual_output_bytes_hex: str | None = Field(
+        default=None,
+        description="Optional hex-encoded output bytes from model for output binding check",
+    )
+    actual_model_sha256: str | None = Field(
+        default=None,
+        description="Optional model SHA-256 for model binding check",
+    )
+
 
 # ---------------------------------------------------------------------------
 # Coverage gap schema

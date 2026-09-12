@@ -1,0 +1,13 @@
+{
+  "scenario_id": "03_model_tampering",
+  "name": "Model Identity Tampering",
+  "category": "binding_tampering",
+  "expected_overall_risk": "HIGH",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "model_mismatch"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "REJECT",
+  "description": "Model SHA-256 differs from signed manifest binding, detecting unauthorized model substitution."
+}

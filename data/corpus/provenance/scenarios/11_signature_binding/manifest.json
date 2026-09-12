@@ -1,0 +1,5 @@
+{
+  "scenario_id": "11_signature_binding",
+  "target_manifest_id": "11111111-0000-0000-0000-00000000000b",
+  "donor_manifest_id": "11111111-0000-0000-0000-00000000000a"
+}

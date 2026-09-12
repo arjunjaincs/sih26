@@ -1,0 +1,13 @@
+{
+  "scenario_id": "04_output_tampering",
+  "name": "Inference Output Tampering",
+  "category": "binding_tampering",
+  "expected_overall_risk": "HIGH",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "output_mismatch"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "REJECT",
+  "description": "Inference predictions altered post-signing, causing output binding hash mismatch."
+}

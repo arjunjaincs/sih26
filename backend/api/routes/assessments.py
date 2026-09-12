@@ -254,6 +254,50 @@ def create_assessment(
             max_size_mb=settings.max_model_size_mb,
         )
 
+    # 4. Resolve optional provenance bundle
+    provenance_manifest = None
+    provenance_public_key = None
+    actual_input_bytes = None
+    actual_output_bytes = None
+    if body.provenance_manifest is not None:
+        try:
+            from backend.domain.entities import ProvenanceManifest
+            provenance_manifest = ProvenanceManifest.model_validate(body.provenance_manifest)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "invalid_provenance_manifest", "message": f"Malformed provenance manifest: {exc}"},
+            )
+
+        if body.provenance_public_key_hex:
+            try:
+                from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+                pub_bytes = bytes.fromhex(body.provenance_public_key_hex)
+                provenance_public_key = Ed25519PublicKey.from_public_bytes(pub_bytes)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "invalid_public_key", "message": f"Invalid Ed25519 public key: {exc}"},
+                )
+
+        if body.actual_input_bytes_hex:
+            try:
+                actual_input_bytes = bytes.fromhex(body.actual_input_bytes_hex)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "invalid_input_bytes", "message": f"Invalid input bytes hex: {exc}"},
+                )
+
+        if body.actual_output_bytes_hex:
+            try:
+                actual_output_bytes = bytes.fromhex(body.actual_output_bytes_hex)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "invalid_output_bytes", "message": f"Invalid output bytes hex: {exc}"},
+                )
+
     # --- Build AssessmentRequest ---
     assess_id = body.assessment_id or str(uuid.uuid4())
     request = AssessmentRequest(
@@ -264,6 +308,11 @@ def create_assessment(
         model_path=model_path,
         model_reference_path=model_reference_path,
         model_reference_fingerprint=body.model_reference_fingerprint,
+        provenance_manifest=provenance_manifest,
+        provenance_public_key=provenance_public_key,
+        actual_input_bytes=actual_input_bytes,
+        actual_output_bytes=actual_output_bytes,
+        actual_model_sha256=body.actual_model_sha256,
         phash_threshold=body.phash_threshold,
         dhash_threshold=body.dhash_threshold,
         min_cluster_size=body.min_cluster_size,
@@ -282,10 +331,11 @@ def create_assessment(
         )
 
     log.info(
-        "Starting assessment '%s' (id=%s) — dataset=%s model=%s",
+        "Starting assessment '%s' (id=%s) — dataset=%s model=%s provenance=%s",
         body.title, assess_id,
         dataset_path is not None,
         model_path is not None,
+        provenance_manifest is not None,
     )
 
     # --- Execute (all real detection logic is in the service) ---

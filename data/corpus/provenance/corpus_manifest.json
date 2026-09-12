@@ -1,0 +1,99 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at": "2026-09-12T19:00:34.446334+00:00",
+  "master_seed": 42,
+  "total_scenarios": 13,
+  "scenarios": [
+    {
+      "scenario_id": "01_clean_provenance",
+      "name": "Clean Baseline Provenance",
+      "category": "clean_baseline",
+      "manifest_path": "scenarios/01_clean_provenance/manifest.json",
+      "ground_truth_path": "scenarios/01_clean_provenance/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "02_input_tampering",
+      "name": "Input Image Tampering",
+      "category": "binding_tampering",
+      "manifest_path": "scenarios/02_input_tampering/manifest.json",
+      "ground_truth_path": "scenarios/02_input_tampering/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "03_model_tampering",
+      "name": "Model Identity Tampering",
+      "category": "binding_tampering",
+      "manifest_path": "scenarios/03_model_tampering/manifest.json",
+      "ground_truth_path": "scenarios/03_model_tampering/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "04_output_tampering",
+      "name": "Inference Output Tampering",
+      "category": "binding_tampering",
+      "manifest_path": "scenarios/04_output_tampering/manifest.json",
+      "ground_truth_path": "scenarios/04_output_tampering/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "05_manifest_tampering",
+      "name": "Signed Field Alteration",
+      "category": "manifest_tampering",
+      "manifest_path": "scenarios/05_manifest_tampering/manifest.json",
+      "ground_truth_path": "scenarios/05_manifest_tampering/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "06_duplicate_replay",
+      "name": "Direct Manifest / Nonce Replay",
+      "category": "replay_anomaly",
+      "manifest_path": "scenarios/06_duplicate_replay/manifest.json",
+      "ground_truth_path": "scenarios/06_duplicate_replay/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "07_sequence_regression",
+      "name": "Monotonic Sequence Regression",
+      "category": "replay_anomaly",
+      "manifest_path": "scenarios/07_sequence_regression/manifest.json",
+      "ground_truth_path": "scenarios/07_sequence_regression/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "08_sequence_gap",
+      "name": "Missing Stream Events Gap",
+      "category": "replay_anomaly",
+      "manifest_path": "scenarios/08_sequence_gap/manifest.json",
+      "ground_truth_path": "scenarios/08_sequence_gap/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "09_fresh_nonce_limitation",
+      "name": "Fresh Nonce Duplicate Inference",
+      "category": "documented_limitation",
+      "manifest_path": "scenarios/09_fresh_nonce_limitation/manifest.json",
+      "ground_truth_path": "scenarios/09_fresh_nonce_limitation/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "10_audit_integration",
+      "name": "End-to-End Audit Trail Integration",
+      "category": "audit_integration",
+      "manifest_path": "scenarios/10_audit_integration/manifest.json",
+      "ground_truth_path": "scenarios/10_audit_integration/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "11_signature_binding",
+      "name": "SEC-01 Signature Transplant Rejection",
+      "category": "security_regression",
+      "manifest_path": "scenarios/11_signature_binding/manifest.json",
+      "ground_truth_path": "scenarios/11_signature_binding/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "12_malformed_provenance",
+      "name": "Corrupted / Malformed Payload",
+      "category": "malformed_unsupported",
+      "manifest_path": "scenarios/12_malformed_provenance/manifest.json",
+      "ground_truth_path": "scenarios/12_malformed_provenance/ground_truth/ground_truth.json"
+    },
+    {
+      "scenario_id": "13_persistence_restart",
+      "name": "Persistence & Service Restart",
+      "category": "persistence",
+      "manifest_path": "scenarios/13_persistence_restart/manifest.json",
+      "ground_truth_path": "scenarios/13_persistence_restart/ground_truth/ground_truth.json"
+    }
+  ]
+}

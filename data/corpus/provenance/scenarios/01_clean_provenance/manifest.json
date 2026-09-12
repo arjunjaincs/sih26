@@ -1,0 +1,8 @@
+{
+  "scenario_id": "01_clean_provenance",
+  "manifest_id": "01010101-0000-0000-0000-000000000001",
+  "assessment_id": "stream-01-clean",
+  "input_sha256": "567e3611094b537115a14c3a314014e8dfcb2b6e993ede8b2da85be93f200849",
+  "model_sha256": "552b0a6a1a401c960c584f121ac14d85e87443fcd3733930ce38d15aa5f4af9e",
+  "output_sha256": "c4965dc9e48b1e63f5391eeb572ca95e0bceedf170d0c4d71ddef83e7d5a8596"
+}

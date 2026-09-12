@@ -1,0 +1,13 @@
+{
+  "scenario_id": "11_signature_binding",
+  "name": "SEC-01 Signature Transplant Rejection",
+  "category": "security_regression",
+  "expected_overall_risk": "HIGH",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "signature_invalid"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "REJECT",
+  "description": "Signature transplanted from Event A onto Event B fails verification; protects against detachment attack."
+}

@@ -1,0 +1,5 @@
+{
+  "scenario_id": "05_manifest_tampering",
+  "manifest_id": "05050505-0000-0000-0000-000000000005",
+  "tampered_field": "inference_config.batch_size"
+}

@@ -1,0 +1,15 @@
+{
+  "scenario_id": "06_duplicate_replay",
+  "name": "Direct Manifest / Nonce Replay",
+  "category": "replay_anomaly",
+  "expected_overall_risk": "MEDIUM",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "replay_detected"
+  ],
+  "expected_replay_anomalies": [
+    "duplicate_manifest_id"
+  ],
+  "expected_disposition": "INVESTIGATE",
+  "description": "Re-presentation of previously accepted manifest identity triggers duplicate_manifest_id replay detection."
+}

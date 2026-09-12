@@ -1,0 +1,1 @@
+{"inference_time_ms":12.4,"model":"pramaan-inference-v1","predictions":[{"confidence":0.9942,"label":"defect_free"},{"confidence":0.0058,"label":"anomaly"}]}

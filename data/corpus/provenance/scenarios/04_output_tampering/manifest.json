@@ -1,0 +1,6 @@
+{
+  "scenario_id": "04_output_tampering",
+  "manifest_id": "04040404-0000-0000-0000-000000000004",
+  "bound_output_sha256": "c4965dc9e48b1e63f5391eeb572ca95e0bceedf170d0c4d71ddef83e7d5a8596",
+  "actual_output_sha256": "272f8fb568f47a945a58f186fc00a28822a384a509944b9d32e94a5f5ee82767"
+}

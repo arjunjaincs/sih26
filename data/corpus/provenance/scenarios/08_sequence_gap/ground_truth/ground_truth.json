@@ -1,0 +1,15 @@
+{
+  "scenario_id": "08_sequence_gap",
+  "name": "Missing Stream Events Gap",
+  "category": "replay_anomaly",
+  "expected_overall_risk": "MEDIUM",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "replay_detected"
+  ],
+  "expected_replay_anomalies": [
+    "sequence_gap"
+  ],
+  "expected_disposition": "INVESTIGATE",
+  "description": "Candidate sequence 3 skips expected sequence 1; sequence gap recorded."
+}

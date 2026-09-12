@@ -1,0 +1,13 @@
+{
+  "scenario_id": "05_manifest_tampering",
+  "name": "Signed Field Alteration",
+  "category": "manifest_tampering",
+  "expected_overall_risk": "HIGH",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "signature_invalid"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "REJECT",
+  "description": "Signed inference_config altered after signing; Ed25519 signature verification fails."
+}

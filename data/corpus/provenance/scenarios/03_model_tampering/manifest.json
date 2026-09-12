@@ -1,0 +1,6 @@
+{
+  "scenario_id": "03_model_tampering",
+  "manifest_id": "03030303-0000-0000-0000-000000000003",
+  "bound_model_sha256": "552b0a6a1a401c960c584f121ac14d85e87443fcd3733930ce38d15aa5f4af9e",
+  "actual_model_sha256": "0241af10525322144bba0abfaf2f3fd1e94dafd99f0bb5fb4ee3d5a94ec21d43"
+}

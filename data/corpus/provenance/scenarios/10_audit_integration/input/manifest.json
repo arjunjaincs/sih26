@@ -1,0 +1,39 @@
+{
+  "manifest_id": "10101010-0000-0000-0000-000000000010",
+  "manifest_version": "1",
+  "assessment_id": "stream-10-audit",
+  "input_sha256": "567e3611094b537115a14c3a314014e8dfcb2b6e993ede8b2da85be93f200849",
+  "model_sha256": "552b0a6a1a401c960c584f121ac14d85e87443fcd3733930ce38d15aa5f4af9e",
+  "preprocessing_config": {
+    "resize": [
+      224,
+      224
+    ],
+    "normalization": {
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    },
+    "color_mode": "RGB"
+  },
+  "inference_config": {
+    "batch_size": 1,
+    "precision": "fp32",
+    "device": "cpu",
+    "execution_provider": "CPUExecutionProvider"
+  },
+  "output_sha256": "c4965dc9e48b1e63f5391eeb572ca95e0bceedf170d0c4d71ddef83e7d5a8596",
+  "timestamp_utc": "2026-01-01T12:00:00Z",
+  "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sequence": 0,
+  "pramaan_version": "1.0.0",
+  "digest": "a0dbfc4ec96e735645f8b843ab7cdcdf78a13a29e33c45625fcfcf47a0ebb316",
+  "signature": "573e81d65ac26cc0dcd7b35bdf4fdb0efc48639dce4322189e7ad7d890430575ef9a168a66bd93fc8ce0677c3f56ceb353a8b77a4f15301ecb90c7232937f409"
+}

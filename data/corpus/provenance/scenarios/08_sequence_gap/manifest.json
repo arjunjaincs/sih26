@@ -1,0 +1,7 @@
+{
+  "scenario_id": "08_sequence_gap",
+  "candidate_manifest_id": "08080808-0000-0000-0000-000000000002",
+  "candidate_sequence": 3,
+  "prior_sequence": 0,
+  "gap_size": 2
+}

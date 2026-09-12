@@ -1,0 +1,13 @@
+{
+  "scenario_id": "01_clean_provenance",
+  "name": "Clean Baseline Provenance",
+  "category": "clean_baseline",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "provenance_valid"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "VERIFIED",
+  "description": "Valid signature and pristine input, model, and output bindings."
+}

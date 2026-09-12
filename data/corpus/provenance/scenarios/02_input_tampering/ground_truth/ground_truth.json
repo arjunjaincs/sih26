@@ -1,0 +1,13 @@
+{
+  "scenario_id": "02_input_tampering",
+  "name": "Input Image Tampering",
+  "category": "binding_tampering",
+  "expected_overall_risk": "HIGH",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "input_mismatch"
+  ],
+  "expected_replay_anomalies": [],
+  "expected_disposition": "REJECT",
+  "description": "Actual input image bytes altered post-signing, causing input binding hash mismatch."
+}

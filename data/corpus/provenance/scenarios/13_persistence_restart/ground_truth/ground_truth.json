@@ -1,0 +1,15 @@
+{
+  "scenario_id": "13_persistence_restart",
+  "name": "Persistence & Service Restart",
+  "category": "persistence",
+  "expected_overall_risk": "MEDIUM",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "replay_detected"
+  ],
+  "expected_replay_anomalies": [
+    "duplicate_manifest_id"
+  ],
+  "expected_disposition": "REPLAY_DETECTED_AFTER_RESTART",
+  "description": "Verified manifest stored in SQLite repository persists across connection restart, triggering replay on resubmission."
+}

@@ -1,0 +1,15 @@
+{
+  "scenario_id": "07_sequence_regression",
+  "name": "Monotonic Sequence Regression",
+  "category": "replay_anomaly",
+  "expected_overall_risk": "MEDIUM",
+  "expected_confidence": "HIGH",
+  "expected_finding_subcategories": [
+    "replay_detected"
+  ],
+  "expected_replay_anomalies": [
+    "sequence_regression"
+  ],
+  "expected_disposition": "INVESTIGATE",
+  "description": "Candidate sequence 0 presented when max known sequence is 1; sequence regression flagged."
+}
