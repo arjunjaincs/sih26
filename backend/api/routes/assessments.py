@@ -28,7 +28,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from backend.api.config import settings
@@ -63,6 +63,10 @@ from backend.infra.db import (
     FindingRepository,
 )
 from backend.infra.ingestion import validate_absolute_path
+from backend.reporting import (
+    extract_report_data_from_db,
+    generate_assessment_report_pdf,
+)
 
 log = logging.getLogger(__name__)
 
@@ -598,6 +602,60 @@ def get_audit(
             )
             for e in events
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/report
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/report",
+    summary="Download PDF Assurance Report for an assessment",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/pdf": {}},
+            "description": "Returns the generated PDF assurance report.",
+        },
+        404: {"description": "Assessment not found."},
+    },
+)
+def get_assessment_report(
+    assessment_id: str,
+    conn: DbDep,
+) -> Response:
+    """
+    Generate and stream an offline human-readable PDF Assurance Report
+    for the specified assessment.
+
+    Returns 404 if the assessment does not exist.
+    """
+    if AssessmentRepository(conn).get(assessment_id) is None:
+        raise AssessmentNotFound(assessment_id)
+
+    try:
+        report_data = extract_report_data_from_db(conn, assessment_id)
+        pdf_bytes = generate_assessment_report_pdf(report_data)
+    except Exception as exc:
+        log.exception("Failed to generate PDF report for assessment %s: %s", assessment_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "report_generation_failed",
+                "message": f"An error occurred while generating the assurance report: {exc}",
+            },
+        )
+
+    safe_short_id = "".join(c for c in assessment_id[:8] if c.isalnum() or c in "-_")
+    filename = f"pramaan_assurance_report_{safe_short_id or 'assessment'}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Type": "application/pdf",
+        },
     )
 
 

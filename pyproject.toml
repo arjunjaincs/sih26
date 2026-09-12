@@ -16,6 +16,7 @@ dependencies = [
     "ImageHash>=4.3.1",
     "httpx>=0.27.0",
     "python-multipart>=0.0.9",
+    "reportlab>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +26,7 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.4.0",
     "mypy>=1.10.0",
+    "pypdf>=5.0.0",
 ]
 # Model-analysis extras — optional so the core package installs without them.
 # Install with: pip install -e ".[models]"
