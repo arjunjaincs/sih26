@@ -277,8 +277,19 @@ async def upload_asset(
                 extracted_dir = settings.blob_dir / "extracted" / upload_id
                 _safe_extract_zip(temp_path, extracted_dir, max_bytes=max_bytes)
 
-                # Check if it has a COCO JSON file or is image directory
-                coco_candidates = list(extracted_dir.glob("*.json")) + list(extracted_dir.glob("*/*.json"))
+                # Check if it has a standalone COCO JSON file or is an image directory (with optional sidecar metadata)
+                coco_candidates = []
+                for jf in list(extracted_dir.glob("*.json")) + list(extracted_dir.glob("*/*.json")):
+                    if jf.name in {"metadata.json", "dataset_manifest.json", "contributors.json", "labels.json"}:
+                        continue
+                    try:
+                        with open(jf, "r", encoding="utf-8") as f:
+                            d = json.load(f)
+                        if isinstance(d, dict) and "images" in d and "annotations" in d and "categories" in d:
+                            coco_candidates.append(jf)
+                    except Exception:
+                        pass
+
                 if coco_candidates:
                     detected_format = "coco_json"
                     final_storage_path = coco_candidates[0]

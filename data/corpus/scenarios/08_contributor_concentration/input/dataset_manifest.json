@@ -1,0 +1,291 @@
+{
+  "manifest_version": "1.0.0",
+  "dataset_name": "scenario_08_contributor_concentration",
+  "dataset_format": "image_dir",
+  "total_samples": 12,
+  "created_at": "2026-09-12T00:00:00Z",
+  "samples": [
+    {
+      "sample_id": "s08_a00",
+      "file_name": "alpha_clean_00.png",
+      "relative_path": "images/alpha_clean_00.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "ddea0eb15c46be8892c1f9a8bad96842a0ffe6ff583e3b517643acbfc0beefb8"
+    },
+    {
+      "sample_id": "s08_a01",
+      "file_name": "alpha_clean_01.png",
+      "relative_path": "images/alpha_clean_01.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "6d0df6b86a86548e9713369df6c40efb2730e1a0eabe9e084cbe30d870ecab9f"
+    },
+    {
+      "sample_id": "s08_a02",
+      "file_name": "alpha_clean_02.png",
+      "relative_path": "images/alpha_clean_02.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "1e248b39eab1c6b33dc7c0a1838ad952689e43219e2360ab542c1d9f1309a43c"
+    },
+    {
+      "sample_id": "s08_a03",
+      "file_name": "alpha_clean_03.png",
+      "relative_path": "images/alpha_clean_03.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "e16d413cf3cbca563f6aa346a63de706f191d0a7cc9b13bca55a02eca3731efd"
+    },
+    {
+      "sample_id": "s08_b00",
+      "file_name": "beta_clean_00.png",
+      "relative_path": "images/beta_clean_00.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "fd8cde1196864c5b3ba4132f2435c3e65794ab5ec61e3ce729e101769ce7e87d"
+    },
+    {
+      "sample_id": "s08_b01",
+      "file_name": "beta_clean_01.png",
+      "relative_path": "images/beta_clean_01.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "eeb736f64c48f942d1967f4b36dd26312b78cd4b9331e6cc626df23f4db07022"
+    },
+    {
+      "sample_id": "s08_b02",
+      "file_name": "beta_clean_02.png",
+      "relative_path": "images/beta_clean_02.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "13796ee542912f8e96304e917941f6e88999c960c9e90b049d61e8946ef45b6d"
+    },
+    {
+      "sample_id": "s08_b03",
+      "file_name": "beta_clean_03.png",
+      "relative_path": "images/beta_clean_03.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "1169e7ebda9dbc1a123763ba1eb61eb811b38cb0dc75ba739628c25953656f26"
+    },
+    {
+      "sample_id": "s08_g1",
+      "file_name": "gamma_dup_orig.png",
+      "relative_path": "images/gamma_dup_orig.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "acad1a8060b329e78b4df935c67b4e928164c3d4ce57c9f62287a1bf77d198e5"
+    },
+    {
+      "sample_id": "s08_g2",
+      "file_name": "gamma_dup_clone.png",
+      "relative_path": "images/gamma_dup_clone.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "acad1a8060b329e78b4df935c67b4e928164c3d4ce57c9f62287a1bf77d198e5"
+    },
+    {
+      "sample_id": "s08_g3",
+      "file_name": "gamma_ped_base.png",
+      "relative_path": "images/gamma_ped_base.png",
+      "label": "pedestrian",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "7a03891402a0f97e2f6a9bc2948bec45c4657299b4806ea1a6cba17cc6557cde"
+    },
+    {
+      "sample_id": "s08_g4",
+      "file_name": "gamma_ped_flipped.png",
+      "relative_path": "images/gamma_ped_flipped.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "7ade527c2367dbd66e89a74ef4e48627cdc846aff226e429806578263537bafc"
+    }
+  ],
+  "info": {
+    "description": "PRAMAAN scenario 08_contributor_concentration manifest",
+    "version": "1.0.0"
+  },
+  "images": [
+    {
+      "id": 1,
+      "file_name": "alpha_clean_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "alpha_clean_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 3,
+      "file_name": "alpha_clean_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 4,
+      "file_name": "alpha_clean_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "beta_clean_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "beta_clean_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 7,
+      "file_name": "beta_clean_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 8,
+      "file_name": "beta_clean_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 9,
+      "file_name": "gamma_dup_orig.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 10,
+      "file_name": "gamma_dup_clone.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 11,
+      "file_name": "gamma_ped_base.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 12,
+      "file_name": "gamma_ped_flipped.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 2
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 1
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 1
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 2
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 1
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ]
+}

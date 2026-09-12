@@ -1,0 +1,217 @@
+{
+  "info": {
+    "description": "PRAMAAN scenario 06_recurring_pattern metadata",
+    "version": "1.0.0",
+    "contributor": "PRAMAAN Corpus Generator"
+  },
+  "contributors": {
+    "pat_clean_veh_00.png": "sensor_alpha",
+    "pat_clean_veh_01.png": "sensor_beta",
+    "pat_clean_veh_02.png": "sensor_gamma",
+    "pat_clean_veh_03.png": "sensor_delta",
+    "pat_clean_ped_00.png": "sensor_beta",
+    "pat_clean_ped_01.png": "sensor_gamma",
+    "pat_clean_ped_02.png": "sensor_delta",
+    "pat_clean_ped_03.png": "sensor_alpha",
+    "pat_injected_veh_00.png": "sensor_alpha",
+    "pat_injected_veh_01.png": "sensor_beta",
+    "pat_injected_ped_00.png": "sensor_gamma",
+    "pat_injected_ped_01.png": "sensor_delta"
+  },
+  "labels": {
+    "pat_clean_veh_00.png": [
+      "vehicle"
+    ],
+    "pat_clean_veh_01.png": [
+      "vehicle"
+    ],
+    "pat_clean_veh_02.png": [
+      "vehicle"
+    ],
+    "pat_clean_veh_03.png": [
+      "vehicle"
+    ],
+    "pat_clean_ped_00.png": [
+      "pedestrian"
+    ],
+    "pat_clean_ped_01.png": [
+      "pedestrian"
+    ],
+    "pat_clean_ped_02.png": [
+      "pedestrian"
+    ],
+    "pat_clean_ped_03.png": [
+      "pedestrian"
+    ],
+    "pat_injected_veh_00.png": [
+      "vehicle"
+    ],
+    "pat_injected_veh_01.png": [
+      "vehicle"
+    ],
+    "pat_injected_ped_00.png": [
+      "pedestrian"
+    ],
+    "pat_injected_ped_01.png": [
+      "pedestrian"
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "pat_clean_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "pat_clean_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "pat_clean_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "pat_clean_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_delta"
+    },
+    {
+      "id": 5,
+      "file_name": "pat_clean_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "pat_clean_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_gamma"
+    },
+    {
+      "id": 7,
+      "file_name": "pat_clean_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_delta"
+    },
+    {
+      "id": 8,
+      "file_name": "pat_clean_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 9,
+      "file_name": "pat_injected_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 10,
+      "file_name": "pat_injected_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 11,
+      "file_name": "pat_injected_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_gamma"
+    },
+    {
+      "id": 12,
+      "file_name": "pat_injected_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_delta"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 2
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 1
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 1
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 2
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 2
+    }
+  ]
+}

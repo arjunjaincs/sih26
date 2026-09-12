@@ -1,0 +1,40 @@
+{
+  "scenario_id": "04_label_flip",
+  "title": "Pairwise Label Contradiction",
+  "description": "Near-identical images carrying conflicting disjoint class labels.",
+  "generation_seed": 42004,
+  "measured_hamming_distance": 2,
+  "total_samples": 10,
+  "affected_samples": [
+    "flip_base_veh.png",
+    "flip_conflict_ped.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di02_label_integrity": {
+      "expected": true,
+      "expected_risk": "HIGH",
+      "conflicts": 1
+    },
+    "di01_duplicates": {
+      "expected": true,
+      "expected_risk": "LOW"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "HIGH",
+  "known_limitations": [
+    "Visual similarity with disjoint labels indicates labeling contradiction, not adversary origin."
+  ]
+}

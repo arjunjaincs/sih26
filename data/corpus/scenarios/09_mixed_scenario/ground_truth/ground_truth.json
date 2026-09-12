@@ -1,0 +1,45 @@
+{
+  "scenario_id": "09_mixed_scenario",
+  "title": "Unified Mixed Integrity Scenario",
+  "description": "Combines duplicates (DI-01), label flip (DI-02), recurring pattern (DI-03), OOD (DI-04), and contributor concentration (DI-05).",
+  "generation_seed": 42009,
+  "total_samples": 18,
+  "affected_samples": [
+    "mix_trig_a_00.png",
+    "mix_trig_a_01.png",
+    "mix_trig_b_00.png",
+    "mix_trig_b_01.png",
+    "mix_gamma_dup_orig.png",
+    "mix_gamma_dup_clone.png",
+    "mix_gamma_flip_base.png",
+    "mix_gamma_flip_conflict.png",
+    "mix_gamma_ood_tall.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di01_duplicates": {
+      "expected": true,
+      "expected_risk": "MEDIUM"
+    },
+    "di02_label_integrity": {
+      "expected": true,
+      "expected_risk": "HIGH"
+    },
+    "di03_trigger_anomaly": {
+      "expected": true,
+      "expected_risk": "HIGH"
+    },
+    "di04_ood_distribution": {
+      "expected": true,
+      "expected_risk": "MEDIUM"
+    },
+    "di05_contributor_risk": {
+      "expected": true,
+      "expected_risk": "HIGH"
+    }
+  },
+  "expected_overall_risk": "HIGH",
+  "known_limitations": [
+    "Multi-finding assessment demonstrates orthogonal detector capabilities."
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "info": {
+    "description": "PRAMAAN scenario 01_clean_baseline metadata",
+    "version": "1.0.0",
+    "contributor": "PRAMAAN Corpus Generator"
+  },
+  "contributors": {
+    "clean_veh_00.png": "sensor_alpha",
+    "clean_veh_01.png": "sensor_beta",
+    "clean_veh_02.png": "pipeline_gamma",
+    "clean_veh_03.png": "sensor_alpha",
+    "clean_veh_04.png": "sensor_beta",
+    "clean_ped_00.png": "sensor_beta",
+    "clean_ped_01.png": "pipeline_gamma",
+    "clean_ped_02.png": "sensor_alpha",
+    "clean_ped_03.png": "sensor_beta",
+    "clean_ped_04.png": "pipeline_gamma"
+  },
+  "labels": {
+    "clean_veh_00.png": [
+      "vehicle"
+    ],
+    "clean_veh_01.png": [
+      "vehicle"
+    ],
+    "clean_veh_02.png": [
+      "vehicle"
+    ],
+    "clean_veh_03.png": [
+      "vehicle"
+    ],
+    "clean_veh_04.png": [
+      "vehicle"
+    ],
+    "clean_ped_00.png": [
+      "pedestrian"
+    ],
+    "clean_ped_01.png": [
+      "pedestrian"
+    ],
+    "clean_ped_02.png": [
+      "pedestrian"
+    ],
+    "clean_ped_03.png": [
+      "pedestrian"
+    ],
+    "clean_ped_04.png": [
+      "pedestrian"
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "clean_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "clean_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "clean_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "clean_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "clean_veh_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "clean_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 7,
+      "file_name": "clean_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 8,
+      "file_name": "clean_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 9,
+      "file_name": "clean_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 10,
+      "file_name": "clean_ped_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 1
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 2
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "scenario_id": "03_near_duplicate",
+  "title": "Near-Duplicate Candidate Injection",
+  "description": "Two perceptually similar near-duplicate clusters with different SHA-256.",
+  "generation_seed": 42003,
+  "measured_hamming_distances": {
+    "vehicle_cluster": 8,
+    "pedestrian_cluster": 8
+  },
+  "total_samples": 10,
+  "affected_samples": [
+    "near_veh_anchor.png",
+    "near_veh_variant.png",
+    "near_ped_anchor.png",
+    "near_ped_variant.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di01_duplicates": {
+      "expected": true,
+      "expected_risk": "LOW",
+      "clusters": 2
+    },
+    "di02_label_integrity": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "LOW",
+  "known_limitations": [
+    "Candidate relationship based on pHash threshold; requires analyst disposition."
+  ]
+}

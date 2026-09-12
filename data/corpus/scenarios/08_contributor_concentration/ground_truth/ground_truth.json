@@ -1,0 +1,43 @@
+{
+  "scenario_id": "08_contributor_concentration",
+  "title": "Disproportionate Contributor Defect Concentration",
+  "description": "Controlled defects concentrated in contributor 'pipeline_gamma' (defect rate 75%).",
+  "generation_seed": 42008,
+  "flagged_contributor": "pipeline_gamma",
+  "expected_contributor_defect_rate": 0.75,
+  "total_samples": 12,
+  "affected_samples": [
+    "gamma_dup_orig.png",
+    "gamma_dup_clone.png",
+    "gamma_ped_base.png",
+    "gamma_ped_flipped.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di05_contributor_risk": {
+      "expected": true,
+      "expected_risk": "HIGH",
+      "target": "pipeline_gamma"
+    },
+    "di01_duplicates": {
+      "expected": true,
+      "expected_risk": "MEDIUM"
+    },
+    "di02_label_integrity": {
+      "expected": true,
+      "expected_risk": "HIGH"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "HIGH",
+  "known_limitations": [
+    "DI-05 requires contributor attribution. Observed concentration does not prove intentional insider threat."
+  ]
+}

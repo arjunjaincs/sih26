@@ -1,0 +1,41 @@
+{
+  "scenario_id": "02_exact_duplicate",
+  "title": "Exact Duplicate Injection",
+  "description": "Two exact duplicate clusters (SHA-256 byte equality).",
+  "generation_seed": 42002,
+  "total_samples": 10,
+  "affected_samples": [
+    "dup_veh_orig.png",
+    "dup_veh_clone.png",
+    "dup_ped_orig.png",
+    "dup_ped_clone.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di01_duplicates": {
+      "expected": true,
+      "expected_risk": "MEDIUM",
+      "clusters": 2
+    },
+    "di02_label_integrity": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "MEDIUM",
+  "known_limitations": [
+    "SHA-256 equality proves byte match; does not prove flooding intent."
+  ]
+}

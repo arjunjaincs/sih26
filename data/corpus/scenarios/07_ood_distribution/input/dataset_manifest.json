@@ -1,0 +1,291 @@
+{
+  "manifest_version": "1.0.0",
+  "dataset_name": "scenario_07_ood_distribution",
+  "dataset_format": "image_dir",
+  "total_samples": 12,
+  "created_at": "2026-09-12T00:00:00Z",
+  "samples": [
+    {
+      "sample_id": "s07_v00",
+      "file_name": "in_dist_veh_00.png",
+      "relative_path": "images/in_dist_veh_00.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "0c00103170cb50bd6344db9b2434eaf410d3ef9302dfcf7e29fe28478eb0ec58"
+    },
+    {
+      "sample_id": "s07_v01",
+      "file_name": "in_dist_veh_01.png",
+      "relative_path": "images/in_dist_veh_01.png",
+      "label": "vehicle",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "f5fd9814c6aa72eceb0e73710b094792b6a52da4f2649750fe7cf074aebff45d"
+    },
+    {
+      "sample_id": "s07_v02",
+      "file_name": "in_dist_veh_02.png",
+      "relative_path": "images/in_dist_veh_02.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "0c9bf88a0fdeb1e9d56766d2a93a6a160d0e811b2e8a9726833ddde748f75a97"
+    },
+    {
+      "sample_id": "s07_v03",
+      "file_name": "in_dist_veh_03.png",
+      "relative_path": "images/in_dist_veh_03.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "5a798815986c73d9f387887b31922ad52e0be023a20f1618299a5e929640a7b0"
+    },
+    {
+      "sample_id": "s07_v04",
+      "file_name": "in_dist_veh_04.png",
+      "relative_path": "images/in_dist_veh_04.png",
+      "label": "vehicle",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "748935a8769463133e7ad38091d36824b0eaa05e08c85215956e6017fe965aef"
+    },
+    {
+      "sample_id": "s07_p00",
+      "file_name": "in_dist_ped_00.png",
+      "relative_path": "images/in_dist_ped_00.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "c1174549771a333cfabd3bccd7c4575dcce299d13349c8cd2e052ce4b1da2e1e"
+    },
+    {
+      "sample_id": "s07_p01",
+      "file_name": "in_dist_ped_01.png",
+      "relative_path": "images/in_dist_ped_01.png",
+      "label": "pedestrian",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "b51dd2a403c62369ff523b76319c4139666f5d6f3a5ade6bfc7d89cfa2899080"
+    },
+    {
+      "sample_id": "s07_p02",
+      "file_name": "in_dist_ped_02.png",
+      "relative_path": "images/in_dist_ped_02.png",
+      "label": "pedestrian",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "5400f5b2989848c3639e3afd5562ef8c4f14402d0961b52691c31ba32de36210"
+    },
+    {
+      "sample_id": "s07_p03",
+      "file_name": "in_dist_ped_03.png",
+      "relative_path": "images/in_dist_ped_03.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "df4380d550b8050d35ece1c81111f293a2bf2b3a96dd66e42c9a669262b7b9ca"
+    },
+    {
+      "sample_id": "s07_p04",
+      "file_name": "in_dist_ped_04.png",
+      "relative_path": "images/in_dist_ped_04.png",
+      "label": "pedestrian",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "fe423fc797db265c0d2b065f988daee853c3267db7818e70ea70b473fb7b03ad"
+    },
+    {
+      "sample_id": "s07_ood1",
+      "file_name": "ood_tall_red.png",
+      "relative_path": "images/ood_tall_red.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 32,
+      "height": 128,
+      "sha256": "8009b59f465dc8a69a83a11d2c7933c61cea31f095afd0092db48b8e1e1992f2"
+    },
+    {
+      "sample_id": "s07_ood2",
+      "file_name": "ood_wide_blue.png",
+      "relative_path": "images/ood_wide_blue.png",
+      "label": "vehicle",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 32,
+      "sha256": "bf9dd63b444dd675ae3d7e74fbcdc1ea10347aa04303661e39559ab29e8c1418"
+    }
+  ],
+  "info": {
+    "description": "PRAMAAN scenario 07_ood_distribution manifest",
+    "version": "1.0.0"
+  },
+  "images": [
+    {
+      "id": 1,
+      "file_name": "in_dist_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "in_dist_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "in_dist_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "in_dist_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "in_dist_veh_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "in_dist_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 7,
+      "file_name": "in_dist_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 8,
+      "file_name": "in_dist_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 9,
+      "file_name": "in_dist_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 10,
+      "file_name": "in_dist_ped_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 11,
+      "file_name": "ood_tall_red.png",
+      "width": 32,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 12,
+      "file_name": "ood_wide_blue.png",
+      "width": 128,
+      "height": 32,
+      "contributor": "sensor_beta"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 1
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 2
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 1
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 1
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ]
+}

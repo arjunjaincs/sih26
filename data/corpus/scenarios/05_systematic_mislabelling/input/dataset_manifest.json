@@ -1,0 +1,313 @@
+{
+  "manifest_version": "1.0.0",
+  "dataset_name": "scenario_05_systematic_mislabelling",
+  "dataset_format": "image_dir",
+  "total_samples": 13,
+  "created_at": "2026-09-12T00:00:00Z",
+  "samples": [
+    {
+      "sample_id": "s05_v00",
+      "file_name": "sys_veh_00.png",
+      "relative_path": "images/sys_veh_00.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "9c94aa9fbc11d80bbc8f76cee1824c8ba2c86247afdb9f85365f4a8aae96c624"
+    },
+    {
+      "sample_id": "s05_v01",
+      "file_name": "sys_veh_01.png",
+      "relative_path": "images/sys_veh_01.png",
+      "label": "vehicle",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "fc83c674d2c2f6939e70869e676d046f25601c1db076d50ec01975a5082ae7e8"
+    },
+    {
+      "sample_id": "s05_v02",
+      "file_name": "sys_veh_02.png",
+      "relative_path": "images/sys_veh_02.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "4b43f0231fd1b1b3f2eb279cd8866cf157746b31ad5916748a16598a3dc2ec3c"
+    },
+    {
+      "sample_id": "s05_v03",
+      "file_name": "sys_veh_03.png",
+      "relative_path": "images/sys_veh_03.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "7f84c56b976d09a5cbbc25ac5ef716345c6edf10af886742143edabe2e2c50d3"
+    },
+    {
+      "sample_id": "s05_v04",
+      "file_name": "sys_veh_04.png",
+      "relative_path": "images/sys_veh_04.png",
+      "label": "vehicle",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "cfba8e4bf20ec8a82199b96f1d2bf6769be80aea1d1289d94586ac74995d9d07"
+    },
+    {
+      "sample_id": "s05_v05",
+      "file_name": "sys_veh_05.png",
+      "relative_path": "images/sys_veh_05.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "55973c468c93fb6d257561d2ef1fd16521fea43a09b736681c4596f9df19da03"
+    },
+    {
+      "sample_id": "s05_p00",
+      "file_name": "sys_ped_00.png",
+      "relative_path": "images/sys_ped_00.png",
+      "label": "pedestrian",
+      "contributor": "cam_vendor_00",
+      "width": 128,
+      "height": 128,
+      "sha256": "593b332490e0f59649bcaa7b8d7e9fa03279a3ef27571b0a34ba3b61cc1236b7"
+    },
+    {
+      "sample_id": "s05_p01",
+      "file_name": "sys_ped_01.png",
+      "relative_path": "images/sys_ped_01.png",
+      "label": "pedestrian",
+      "contributor": "cam_vendor_01",
+      "width": 128,
+      "height": 128,
+      "sha256": "5006ef220f09d9d224adedd319658442fc4c5339b6ec10166c4f656114c84a2d"
+    },
+    {
+      "sample_id": "s05_p02",
+      "file_name": "sys_ped_02.png",
+      "relative_path": "images/sys_ped_02.png",
+      "label": "pedestrian",
+      "contributor": "cam_vendor_02",
+      "width": 128,
+      "height": 128,
+      "sha256": "d2b6c4a1e4cd6014b9f3c6a08cc79766684637d706cee8b9e10148ae437825bb"
+    },
+    {
+      "sample_id": "s05_p03",
+      "file_name": "sys_ped_03.png",
+      "relative_path": "images/sys_ped_03.png",
+      "label": "pedestrian",
+      "contributor": "cam_vendor_03",
+      "width": 128,
+      "height": 128,
+      "sha256": "67defc81bf1850bee641c947997009ab2815c96a05fefcd675735c90c1d64e4e"
+    },
+    {
+      "sample_id": "s05_m00",
+      "file_name": "sys_mislabeled_00.png",
+      "relative_path": "images/sys_mislabeled_00.png",
+      "label": "vehicle",
+      "contributor": "labeling_node_a",
+      "width": 128,
+      "height": 128,
+      "sha256": "75f6d4cf00b542b16b0d10d7cb6d9dbb023dabdbb203affaaadc0aca529b946b"
+    },
+    {
+      "sample_id": "s05_m01",
+      "file_name": "sys_mislabeled_01.png",
+      "relative_path": "images/sys_mislabeled_01.png",
+      "label": "vehicle",
+      "contributor": "labeling_node_b",
+      "width": 128,
+      "height": 128,
+      "sha256": "0dd204a10b400b4c5bfd01a90edc38d792ef7b7a414f418c87d4055edc70e56b"
+    },
+    {
+      "sample_id": "s05_m02",
+      "file_name": "sys_mislabeled_02.png",
+      "relative_path": "images/sys_mislabeled_02.png",
+      "label": "vehicle",
+      "contributor": "labeling_node_c",
+      "width": 128,
+      "height": 128,
+      "sha256": "be8ccfc44536b45d7210649e23428eb8d97281c604ef8ed1ddfea32d7247bc00"
+    }
+  ],
+  "info": {
+    "description": "PRAMAAN scenario 05_systematic_mislabelling manifest",
+    "version": "1.0.0"
+  },
+  "images": [
+    {
+      "id": 1,
+      "file_name": "sys_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "sys_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "sys_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "sys_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "sys_veh_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "sys_veh_05.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 7,
+      "file_name": "sys_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_00"
+    },
+    {
+      "id": 8,
+      "file_name": "sys_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_01"
+    },
+    {
+      "id": 9,
+      "file_name": "sys_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_02"
+    },
+    {
+      "id": 10,
+      "file_name": "sys_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_03"
+    },
+    {
+      "id": 11,
+      "file_name": "sys_mislabeled_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "labeling_node_a"
+    },
+    {
+      "id": 12,
+      "file_name": "sys_mislabeled_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "labeling_node_b"
+    },
+    {
+      "id": 13,
+      "file_name": "sys_mislabeled_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "labeling_node_c"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 1
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 1
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 2
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 1
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 1
+    },
+    {
+      "id": 13,
+      "image_id": 13,
+      "category_id": 1
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ]
+}

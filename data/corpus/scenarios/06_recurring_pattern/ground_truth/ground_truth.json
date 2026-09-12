@@ -1,0 +1,43 @@
+{
+  "scenario_id": "06_recurring_pattern",
+  "title": "Controlled Recurring Localized Visual Pattern",
+  "description": "High-contrast 16x16 checkerboard injected in the bottom-right corner across 4 distinct images.",
+  "generation_seed": 42006,
+  "trigger_location": "bottom_right",
+  "patch_size_px": 16,
+  "total_samples": 12,
+  "affected_samples": [
+    "pat_injected_veh_00.png",
+    "pat_injected_veh_01.png",
+    "pat_injected_ped_00.png",
+    "pat_injected_ped_01.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di03_trigger_anomaly": {
+      "expected": true,
+      "expected_risk": "HIGH",
+      "location": "bottom_right"
+    },
+    "di01_duplicates": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di02_label_integrity": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "HIGH",
+  "known_limitations": [
+    "DI-03 detects recurring localized spatial patterns; it does not prove a malicious backdoor."
+  ]
+}

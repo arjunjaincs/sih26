@@ -1,0 +1,35 @@
+{
+  "scenario_id": "01_clean_baseline",
+  "title": "Clean Baseline",
+  "description": "Clean dataset with no intentional duplicates, conflicts, or outliers.",
+  "generation_seed": 42001,
+  "total_samples": 10,
+  "affected_samples": [],
+  "anomaly_present": false,
+  "expected_detectors": {
+    "di01_duplicates": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di02_label_integrity": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "NONE",
+  "known_limitations": [
+    "Heuristic sensitivity bounds false positive margin."
+  ]
+}

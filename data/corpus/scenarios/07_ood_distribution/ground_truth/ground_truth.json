@@ -1,0 +1,39 @@
+{
+  "scenario_id": "07_ood_distribution",
+  "title": "Multivariate Statistical Distribution Outliers",
+  "description": "Geometric aspect ratio and photometric color channel distribution divergence.",
+  "generation_seed": 42007,
+  "total_samples": 12,
+  "affected_samples": [
+    "ood_tall_red.png",
+    "ood_wide_blue.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di04_ood_distribution": {
+      "expected": true,
+      "expected_risk": "MEDIUM",
+      "outliers": 2
+    },
+    "di01_duplicates": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di02_label_integrity": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "MEDIUM",
+  "known_limitations": [
+    "DI-04 detects the low-level statistical distribution representation implemented in v1; it does not provide semantic OOD guarantees."
+  ]
+}

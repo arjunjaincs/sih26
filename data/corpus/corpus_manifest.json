@@ -1,0 +1,99 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at": "2026-09-12T16:57:21.666496+00:00",
+  "master_seed": 42,
+  "total_scenarios": 9,
+  "total_images": 107,
+  "scenarios": [
+    {
+      "scenario_id": "01_clean_baseline",
+      "title": "Clean Baseline",
+      "total_samples": 10,
+      "anomaly_present": false,
+      "expected_overall_risk": "NONE",
+      "input_dir": "scenarios/01_clean_baseline/input",
+      "ground_truth_path": "scenarios/01_clean_baseline/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/01_clean_baseline/scenario_01_clean_baseline.zip"
+    },
+    {
+      "scenario_id": "02_exact_duplicate",
+      "title": "Exact Duplicate Injection",
+      "total_samples": 10,
+      "anomaly_present": true,
+      "expected_overall_risk": "MEDIUM",
+      "input_dir": "scenarios/02_exact_duplicate/input",
+      "ground_truth_path": "scenarios/02_exact_duplicate/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/02_exact_duplicate/scenario_02_exact_duplicate.zip"
+    },
+    {
+      "scenario_id": "03_near_duplicate",
+      "title": "Near-Duplicate Candidate Injection",
+      "total_samples": 10,
+      "anomaly_present": true,
+      "expected_overall_risk": "LOW",
+      "input_dir": "scenarios/03_near_duplicate/input",
+      "ground_truth_path": "scenarios/03_near_duplicate/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/03_near_duplicate/scenario_03_near_duplicate.zip"
+    },
+    {
+      "scenario_id": "04_label_flip",
+      "title": "Pairwise Label Contradiction",
+      "total_samples": 10,
+      "anomaly_present": true,
+      "expected_overall_risk": "HIGH",
+      "input_dir": "scenarios/04_label_flip/input",
+      "ground_truth_path": "scenarios/04_label_flip/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/04_label_flip/scenario_04_label_flip.zip"
+    },
+    {
+      "scenario_id": "05_systematic_mislabelling",
+      "title": "Systematic Mislabelling",
+      "total_samples": 13,
+      "anomaly_present": true,
+      "expected_overall_risk": "HIGH",
+      "input_dir": "scenarios/05_systematic_mislabelling/input",
+      "ground_truth_path": "scenarios/05_systematic_mislabelling/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/05_systematic_mislabelling/scenario_05_systematic_mislabelling.zip"
+    },
+    {
+      "scenario_id": "06_recurring_pattern",
+      "title": "Controlled Recurring Localized Visual Pattern",
+      "total_samples": 12,
+      "anomaly_present": true,
+      "expected_overall_risk": "HIGH",
+      "input_dir": "scenarios/06_recurring_pattern/input",
+      "ground_truth_path": "scenarios/06_recurring_pattern/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/06_recurring_pattern/scenario_06_recurring_pattern.zip"
+    },
+    {
+      "scenario_id": "07_ood_distribution",
+      "title": "Multivariate Statistical Distribution Outliers",
+      "total_samples": 12,
+      "anomaly_present": true,
+      "expected_overall_risk": "MEDIUM",
+      "input_dir": "scenarios/07_ood_distribution/input",
+      "ground_truth_path": "scenarios/07_ood_distribution/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/07_ood_distribution/scenario_07_ood_distribution.zip"
+    },
+    {
+      "scenario_id": "08_contributor_concentration",
+      "title": "Disproportionate Contributor Defect Concentration",
+      "total_samples": 12,
+      "anomaly_present": true,
+      "expected_overall_risk": "HIGH",
+      "input_dir": "scenarios/08_contributor_concentration/input",
+      "ground_truth_path": "scenarios/08_contributor_concentration/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/08_contributor_concentration/scenario_08_contributor_concentration.zip"
+    },
+    {
+      "scenario_id": "09_mixed_scenario",
+      "title": "Unified Mixed Integrity Scenario",
+      "total_samples": 18,
+      "anomaly_present": true,
+      "expected_overall_risk": "HIGH",
+      "input_dir": "scenarios/09_mixed_scenario/input",
+      "ground_truth_path": "scenarios/09_mixed_scenario/ground_truth/ground_truth.json",
+      "zip_path": "scenarios/09_mixed_scenario/scenario_09_mixed_scenario.zip"
+    }
+  ]
+}

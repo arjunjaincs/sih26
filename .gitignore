@@ -42,7 +42,8 @@ uploads/
 models/*.pt
 models/*.pth
 models/*.onnx
-/data/
+/data/*
+!/data/corpus/
 
 # PRAMAAN runtime data
 pramaan_data/

@@ -1,0 +1,217 @@
+{
+  "info": {
+    "description": "PRAMAAN scenario 07_ood_distribution metadata",
+    "version": "1.0.0",
+    "contributor": "PRAMAAN Corpus Generator"
+  },
+  "contributors": {
+    "in_dist_veh_00.png": "sensor_alpha",
+    "in_dist_veh_01.png": "sensor_beta",
+    "in_dist_veh_02.png": "pipeline_gamma",
+    "in_dist_veh_03.png": "sensor_alpha",
+    "in_dist_veh_04.png": "sensor_beta",
+    "in_dist_ped_00.png": "sensor_beta",
+    "in_dist_ped_01.png": "pipeline_gamma",
+    "in_dist_ped_02.png": "sensor_alpha",
+    "in_dist_ped_03.png": "sensor_beta",
+    "in_dist_ped_04.png": "pipeline_gamma",
+    "ood_tall_red.png": "sensor_alpha",
+    "ood_wide_blue.png": "sensor_beta"
+  },
+  "labels": {
+    "in_dist_veh_00.png": [
+      "vehicle"
+    ],
+    "in_dist_veh_01.png": [
+      "vehicle"
+    ],
+    "in_dist_veh_02.png": [
+      "vehicle"
+    ],
+    "in_dist_veh_03.png": [
+      "vehicle"
+    ],
+    "in_dist_veh_04.png": [
+      "vehicle"
+    ],
+    "in_dist_ped_00.png": [
+      "pedestrian"
+    ],
+    "in_dist_ped_01.png": [
+      "pedestrian"
+    ],
+    "in_dist_ped_02.png": [
+      "pedestrian"
+    ],
+    "in_dist_ped_03.png": [
+      "pedestrian"
+    ],
+    "in_dist_ped_04.png": [
+      "pedestrian"
+    ],
+    "ood_tall_red.png": [
+      "vehicle"
+    ],
+    "ood_wide_blue.png": [
+      "vehicle"
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "in_dist_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "in_dist_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "in_dist_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "in_dist_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "in_dist_veh_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "in_dist_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 7,
+      "file_name": "in_dist_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 8,
+      "file_name": "in_dist_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 9,
+      "file_name": "in_dist_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 10,
+      "file_name": "in_dist_ped_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 11,
+      "file_name": "ood_tall_red.png",
+      "width": 32,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 12,
+      "file_name": "ood_wide_blue.png",
+      "width": 128,
+      "height": 32,
+      "contributor": "sensor_beta"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 1
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 2
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 1
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 1
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "info": {
+    "description": "PRAMAAN scenario 02_exact_duplicate metadata",
+    "version": "1.0.0",
+    "contributor": "PRAMAAN Corpus Generator"
+  },
+  "contributors": {
+    "ctrl_veh_00.png": "sensor_alpha",
+    "ctrl_veh_01.png": "sensor_beta",
+    "ctrl_veh_02.png": "pipeline_gamma",
+    "ctrl_ped_00.png": "sensor_beta",
+    "ctrl_ped_01.png": "pipeline_gamma",
+    "ctrl_ped_02.png": "sensor_alpha",
+    "dup_veh_orig.png": "sensor_alpha",
+    "dup_veh_clone.png": "sensor_beta",
+    "dup_ped_orig.png": "sensor_gamma",
+    "dup_ped_clone.png": "sensor_delta"
+  },
+  "labels": {
+    "ctrl_veh_00.png": [
+      "vehicle"
+    ],
+    "ctrl_veh_01.png": [
+      "vehicle"
+    ],
+    "ctrl_veh_02.png": [
+      "vehicle"
+    ],
+    "ctrl_ped_00.png": [
+      "pedestrian"
+    ],
+    "ctrl_ped_01.png": [
+      "pedestrian"
+    ],
+    "ctrl_ped_02.png": [
+      "pedestrian"
+    ],
+    "dup_veh_orig.png": [
+      "vehicle"
+    ],
+    "dup_veh_clone.png": [
+      "vehicle"
+    ],
+    "dup_ped_orig.png": [
+      "pedestrian"
+    ],
+    "dup_ped_clone.png": [
+      "pedestrian"
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "ctrl_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "ctrl_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "ctrl_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "ctrl_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 5,
+      "file_name": "ctrl_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 6,
+      "file_name": "ctrl_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 7,
+      "file_name": "dup_veh_orig.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 8,
+      "file_name": "dup_veh_clone.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 9,
+      "file_name": "dup_ped_orig.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_gamma"
+    },
+    {
+      "id": 10,
+      "file_name": "dup_ped_clone.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_delta"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 2
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 2
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 1
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 1
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 2
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    }
+  ]
+}

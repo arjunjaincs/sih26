@@ -1,0 +1,247 @@
+{
+  "manifest_version": "1.0.0",
+  "dataset_name": "scenario_04_label_flip",
+  "dataset_format": "image_dir",
+  "total_samples": 10,
+  "created_at": "2026-09-12T00:00:00Z",
+  "samples": [
+    {
+      "sample_id": "s04_cv00",
+      "file_name": "ctrl_veh_00.png",
+      "relative_path": "images/ctrl_veh_00.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "94764230fde3a1e82ea32e207cbff0840ea3edf3f90eb5a2658e440dcdcfb641"
+    },
+    {
+      "sample_id": "s04_cv01",
+      "file_name": "ctrl_veh_01.png",
+      "relative_path": "images/ctrl_veh_01.png",
+      "label": "vehicle",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "4d20e40582f7544faf75dc1da161f63477b57997c0eed05ea62570dd760c3345"
+    },
+    {
+      "sample_id": "s04_cv02",
+      "file_name": "ctrl_veh_02.png",
+      "relative_path": "images/ctrl_veh_02.png",
+      "label": "vehicle",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "c7f97479c1c2f1e34c8783db1e47a5c6f3b6bd71a00b0460fb36c6c296010f34"
+    },
+    {
+      "sample_id": "s04_cv03",
+      "file_name": "ctrl_veh_03.png",
+      "relative_path": "images/ctrl_veh_03.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "8f8ea7496098ff082ab193c6df5b5c8dd8105de37b4b2fae4dd43bd968c8520e"
+    },
+    {
+      "sample_id": "s04_cp00",
+      "file_name": "ctrl_ped_00.png",
+      "relative_path": "images/ctrl_ped_00.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "24a3bbe219f29f5039b2a842a5c36b1e1a4aba95a15d4f1daf7529349b34a422"
+    },
+    {
+      "sample_id": "s04_cp01",
+      "file_name": "ctrl_ped_01.png",
+      "relative_path": "images/ctrl_ped_01.png",
+      "label": "pedestrian",
+      "contributor": "pipeline_gamma",
+      "width": 128,
+      "height": 128,
+      "sha256": "bc6f16b652d87a737ac2a130e88aa1730ebb09545f88a236522ae7b4fc5632c0"
+    },
+    {
+      "sample_id": "s04_cp02",
+      "file_name": "ctrl_ped_02.png",
+      "relative_path": "images/ctrl_ped_02.png",
+      "label": "pedestrian",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "6622d96ae9112537dbd076dd1ad207c3f759d134fcc1ce38234f8b8add519093"
+    },
+    {
+      "sample_id": "s04_cp03",
+      "file_name": "ctrl_ped_03.png",
+      "relative_path": "images/ctrl_ped_03.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "903d8664fde2d0e022e197b981141af12378c18ac1aec5953352268d332e7212"
+    },
+    {
+      "sample_id": "s04_f1",
+      "file_name": "flip_base_veh.png",
+      "relative_path": "images/flip_base_veh.png",
+      "label": "vehicle",
+      "contributor": "sensor_alpha",
+      "width": 128,
+      "height": 128,
+      "sha256": "3d97677c3af830bd576aa673d778db68804d4b6d5831847272cd4764089f5b39"
+    },
+    {
+      "sample_id": "s04_f2",
+      "file_name": "flip_conflict_ped.png",
+      "relative_path": "images/flip_conflict_ped.png",
+      "label": "pedestrian",
+      "contributor": "sensor_beta",
+      "width": 128,
+      "height": 128,
+      "sha256": "71d3d0ddfa1506d61439373b9425242241ad7bb9c6e057d3a22196a21625d636"
+    }
+  ],
+  "info": {
+    "description": "PRAMAAN scenario 04_label_flip manifest",
+    "version": "1.0.0"
+  },
+  "images": [
+    {
+      "id": 1,
+      "file_name": "ctrl_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "ctrl_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "ctrl_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "ctrl_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "ctrl_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "ctrl_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 7,
+      "file_name": "ctrl_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 8,
+      "file_name": "ctrl_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 9,
+      "file_name": "flip_base_veh.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 10,
+      "file_name": "flip_conflict_ped.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 2
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 1
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ]
+}

@@ -1,0 +1,313 @@
+{
+  "info": {
+    "description": "PRAMAAN scenario 09_mixed_scenario metadata",
+    "version": "1.0.0",
+    "contributor": "PRAMAAN Corpus Generator"
+  },
+  "contributors": {
+    "mix_clean_a_00.png": "sensor_alpha",
+    "mix_clean_a_01.png": "sensor_alpha",
+    "mix_clean_a_02.png": "sensor_alpha",
+    "mix_clean_a_03.png": "sensor_alpha",
+    "mix_clean_b_00.png": "sensor_beta",
+    "mix_clean_b_01.png": "sensor_beta",
+    "mix_clean_b_02.png": "sensor_beta",
+    "mix_clean_b_03.png": "sensor_beta",
+    "mix_trig_a_00.png": "sensor_alpha",
+    "mix_trig_a_01.png": "sensor_alpha",
+    "mix_trig_b_00.png": "sensor_beta",
+    "mix_trig_b_01.png": "sensor_beta",
+    "mix_gamma_dup_orig.png": "pipeline_gamma",
+    "mix_gamma_dup_clone.png": "pipeline_gamma",
+    "mix_gamma_flip_base.png": "pipeline_gamma",
+    "mix_gamma_flip_conflict.png": "pipeline_gamma",
+    "mix_gamma_ood_tall.png": "pipeline_gamma",
+    "mix_gamma_clean.png": "pipeline_gamma"
+  },
+  "labels": {
+    "mix_clean_a_00.png": [
+      "vehicle"
+    ],
+    "mix_clean_a_01.png": [
+      "vehicle"
+    ],
+    "mix_clean_a_02.png": [
+      "vehicle"
+    ],
+    "mix_clean_a_03.png": [
+      "vehicle"
+    ],
+    "mix_clean_b_00.png": [
+      "pedestrian"
+    ],
+    "mix_clean_b_01.png": [
+      "pedestrian"
+    ],
+    "mix_clean_b_02.png": [
+      "pedestrian"
+    ],
+    "mix_clean_b_03.png": [
+      "pedestrian"
+    ],
+    "mix_trig_a_00.png": [
+      "vehicle"
+    ],
+    "mix_trig_a_01.png": [
+      "vehicle"
+    ],
+    "mix_trig_b_00.png": [
+      "pedestrian"
+    ],
+    "mix_trig_b_01.png": [
+      "pedestrian"
+    ],
+    "mix_gamma_dup_orig.png": [
+      "vehicle"
+    ],
+    "mix_gamma_dup_clone.png": [
+      "vehicle"
+    ],
+    "mix_gamma_flip_base.png": [
+      "pedestrian"
+    ],
+    "mix_gamma_flip_conflict.png": [
+      "vehicle"
+    ],
+    "mix_gamma_ood_tall.png": [
+      "vehicle"
+    ],
+    "mix_gamma_clean.png": [
+      "vehicle"
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "mix_clean_a_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "mix_clean_a_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 3,
+      "file_name": "mix_clean_a_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 4,
+      "file_name": "mix_clean_a_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "mix_clean_b_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "mix_clean_b_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 7,
+      "file_name": "mix_clean_b_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 8,
+      "file_name": "mix_clean_b_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 9,
+      "file_name": "mix_trig_a_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 10,
+      "file_name": "mix_trig_a_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 11,
+      "file_name": "mix_trig_b_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 12,
+      "file_name": "mix_trig_b_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 13,
+      "file_name": "mix_gamma_dup_orig.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 14,
+      "file_name": "mix_gamma_dup_clone.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 15,
+      "file_name": "mix_gamma_flip_base.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 16,
+      "file_name": "mix_gamma_flip_conflict.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 17,
+      "file_name": "mix_gamma_ood_tall.png",
+      "width": 32,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 18,
+      "file_name": "mix_gamma_clean.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 2
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 2
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 1
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 1
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 2
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 2
+    },
+    {
+      "id": 13,
+      "image_id": 13,
+      "category_id": 1
+    },
+    {
+      "id": 14,
+      "image_id": 14,
+      "category_id": 1
+    },
+    {
+      "id": 15,
+      "image_id": 15,
+      "category_id": 2
+    },
+    {
+      "id": 16,
+      "image_id": 16,
+      "category_id": 1
+    },
+    {
+      "id": 17,
+      "image_id": 17,
+      "category_id": 1
+    },
+    {
+      "id": 18,
+      "image_id": 18,
+      "category_id": 1
+    }
+  ]
+}

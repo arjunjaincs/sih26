@@ -1,0 +1,40 @@
+{
+  "scenario_id": "05_systematic_mislabelling",
+  "title": "Systematic Mislabelling",
+  "description": "Repeated label corruption where multiple samples with pedestrian features are labeled vehicle.",
+  "generation_seed": 42005,
+  "total_samples": 13,
+  "affected_samples": [
+    "sys_mislabeled_00.png",
+    "sys_mislabeled_01.png",
+    "sys_mislabeled_02.png"
+  ],
+  "anomaly_present": true,
+  "expected_detectors": {
+    "di02_label_integrity": {
+      "expected": true,
+      "expected_risk": "HIGH",
+      "min_findings": 2
+    },
+    "di01_duplicates": {
+      "expected": true,
+      "expected_risk": "LOW"
+    },
+    "di03_trigger_anomaly": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di04_ood_distribution": {
+      "expected": false,
+      "expected_risk": "NONE"
+    },
+    "di05_contributor_risk": {
+      "expected": false,
+      "expected_risk": "NONE"
+    }
+  },
+  "expected_overall_risk": "HIGH",
+  "known_limitations": [
+    "Provides stronger evidence of persistent mislabelling than an isolated error."
+  ]
+}

@@ -1,0 +1,233 @@
+{
+  "info": {
+    "description": "PRAMAAN scenario 05_systematic_mislabelling metadata",
+    "version": "1.0.0",
+    "contributor": "PRAMAAN Corpus Generator"
+  },
+  "contributors": {
+    "sys_veh_00.png": "sensor_alpha",
+    "sys_veh_01.png": "sensor_beta",
+    "sys_veh_02.png": "pipeline_gamma",
+    "sys_veh_03.png": "sensor_alpha",
+    "sys_veh_04.png": "sensor_beta",
+    "sys_veh_05.png": "pipeline_gamma",
+    "sys_ped_00.png": "cam_vendor_00",
+    "sys_ped_01.png": "cam_vendor_01",
+    "sys_ped_02.png": "cam_vendor_02",
+    "sys_ped_03.png": "cam_vendor_03",
+    "sys_mislabeled_00.png": "labeling_node_a",
+    "sys_mislabeled_01.png": "labeling_node_b",
+    "sys_mislabeled_02.png": "labeling_node_c"
+  },
+  "labels": {
+    "sys_veh_00.png": [
+      "vehicle"
+    ],
+    "sys_veh_01.png": [
+      "vehicle"
+    ],
+    "sys_veh_02.png": [
+      "vehicle"
+    ],
+    "sys_veh_03.png": [
+      "vehicle"
+    ],
+    "sys_veh_04.png": [
+      "vehicle"
+    ],
+    "sys_veh_05.png": [
+      "vehicle"
+    ],
+    "sys_ped_00.png": [
+      "pedestrian"
+    ],
+    "sys_ped_01.png": [
+      "pedestrian"
+    ],
+    "sys_ped_02.png": [
+      "pedestrian"
+    ],
+    "sys_ped_03.png": [
+      "pedestrian"
+    ],
+    "sys_mislabeled_00.png": [
+      "vehicle"
+    ],
+    "sys_mislabeled_01.png": [
+      "vehicle"
+    ],
+    "sys_mislabeled_02.png": [
+      "vehicle"
+    ]
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "vehicle"
+    },
+    {
+      "id": 2,
+      "name": "pedestrian"
+    }
+  ],
+  "images": [
+    {
+      "id": 1,
+      "file_name": "sys_veh_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 2,
+      "file_name": "sys_veh_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 3,
+      "file_name": "sys_veh_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 4,
+      "file_name": "sys_veh_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_alpha"
+    },
+    {
+      "id": 5,
+      "file_name": "sys_veh_04.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "sensor_beta"
+    },
+    {
+      "id": 6,
+      "file_name": "sys_veh_05.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "pipeline_gamma"
+    },
+    {
+      "id": 7,
+      "file_name": "sys_ped_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_00"
+    },
+    {
+      "id": 8,
+      "file_name": "sys_ped_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_01"
+    },
+    {
+      "id": 9,
+      "file_name": "sys_ped_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_02"
+    },
+    {
+      "id": 10,
+      "file_name": "sys_ped_03.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "cam_vendor_03"
+    },
+    {
+      "id": 11,
+      "file_name": "sys_mislabeled_00.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "labeling_node_a"
+    },
+    {
+      "id": 12,
+      "file_name": "sys_mislabeled_01.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "labeling_node_b"
+    },
+    {
+      "id": 13,
+      "file_name": "sys_mislabeled_02.png",
+      "width": 128,
+      "height": 128,
+      "contributor": "labeling_node_c"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 1
+    },
+    {
+      "id": 3,
+      "image_id": 3,
+      "category_id": 1
+    },
+    {
+      "id": 4,
+      "image_id": 4,
+      "category_id": 1
+    },
+    {
+      "id": 5,
+      "image_id": 5,
+      "category_id": 1
+    },
+    {
+      "id": 6,
+      "image_id": 6,
+      "category_id": 1
+    },
+    {
+      "id": 7,
+      "image_id": 7,
+      "category_id": 2
+    },
+    {
+      "id": 8,
+      "image_id": 8,
+      "category_id": 2
+    },
+    {
+      "id": 9,
+      "image_id": 9,
+      "category_id": 2
+    },
+    {
+      "id": 10,
+      "image_id": 10,
+      "category_id": 2
+    },
+    {
+      "id": 11,
+      "image_id": 11,
+      "category_id": 1
+    },
+    {
+      "id": 12,
+      "image_id": 12,
+      "category_id": 1
+    },
+    {
+      "id": 13,
+      "image_id": 13,
+      "category_id": 1
+    }
+  ]
+}
