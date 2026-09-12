@@ -90,6 +90,7 @@ from backend.infra.db import (
     EvidenceRepository,
     FindingRepository,
     ModelArtifactRepository,
+    ProvenanceRepository,
     SampleRepository,
 )
 from backend.infra.ingestion import (
@@ -146,6 +147,7 @@ class AssessmentService:
         self._audit_repo = AuditRepository(conn)
         self._payload_repo = AuditPayloadRepository(conn)
         self._audit_svc = make_audit_service(conn)
+        self._provenance_repo = ProvenanceRepository(conn)
 
     # ------------------------------------------------------------------
     # Public API
@@ -330,6 +332,28 @@ class AssessmentService:
         # ----------------------------------------------------------------
         completed_at = datetime.now(timezone.utc)
         self._assessment_repo.update_state(assess_id, AssessmentState.COMPLETE)
+
+        # Persist verified provenance manifest so subsequent assessments can detect replays
+        if request.provenance_manifest is not None:
+            pi01_record = next(
+                (r for r in run_records if r.detector_id == "inference.provenance.pi01_integrity"),
+                None,
+            )
+            is_verified = (
+                pi01_record is not None
+                and pi01_record.ran
+                and not any(
+                    f.detector_id == "inference.provenance.pi01_integrity"
+                    and f.subcategory in ("signature_invalid", "replay_detected", "input_mismatch", "model_mismatch", "output_mismatch")
+                    for out in all_outputs
+                    for f in out.findings
+                )
+            )
+            if is_verified and self._provenance_repo.get(request.provenance_manifest.manifest_id) is None:
+                try:
+                    self._provenance_repo.insert(request.provenance_manifest)
+                except Exception as exc:
+                    log.warning("Failed to persist verified provenance manifest: %s", exc)
 
         try:
             self._audit_svc.emit_event(
@@ -668,13 +692,14 @@ class AssessmentService:
 
         # --- PI-01: provenance manifest ---
         if inference_bundle_asset_id is not None:
+            known_manifests = self._provenance_repo.list_all()
             pi01_ctx = PI01Context(
                 manifest=request.provenance_manifest,
                 public_key=request.provenance_public_key,
                 actual_input_bytes=request.actual_input_bytes,
                 actual_output_bytes=request.actual_output_bytes,
                 actual_model_sha256=request.actual_model_sha256,
-                known_manifests=[],   # V1: no prior manifests tracked by orchestrator
+                known_manifests=known_manifests,
             )
             plans.append({
                 "detector":       PI01ProvenanceIntegrityDetector(),

@@ -18,6 +18,7 @@ Design choices:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 import sqlite3
 from pathlib import Path
@@ -771,6 +772,14 @@ class ProvenanceRepository:
         self._conn = conn
 
     def insert(self, m: ProvenanceManifest) -> None:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        self._conn.execute(
+            """
+            INSERT OR IGNORE INTO assessments (assessment_id, title, state, created_at)
+            VALUES (?, ?, 'complete', ?)
+            """,
+            (m.assessment_id, f"Inference Stream {m.assessment_id}", now_iso),
+        )
         self._conn.execute(
             """
             INSERT INTO provenance_manifests
@@ -828,6 +837,13 @@ class ProvenanceRepository:
             (assessment_id,),
         ).fetchall()
         return [self.get(r["manifest_id"]) for r in rows]  # type: ignore[misc]
+
+    def list_all(self) -> list[ProvenanceManifest]:
+        """Return all stored manifests ordered by sequence, rowid."""
+        rows = self._conn.execute(
+            "SELECT manifest_id FROM provenance_manifests ORDER BY sequence, rowid"
+        ).fetchall()
+        return [m for r in rows if (m := self.get(r["manifest_id"])) is not None]
 
     def max_sequence(self, assessment_id: str) -> int:
         """Return the highest sequence number for this assessment (or -1)."""
