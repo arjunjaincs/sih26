@@ -105,7 +105,7 @@ export function Overview() {
 
           {/* Right: Technical Composition */}
           <div className="lg:col-span-7 relative flex items-center justify-center w-full">
-            <HeroComposition />
+            <HeroComposition version={health?.version ?? '1.0.0'} />
           </div>
 
         </div>

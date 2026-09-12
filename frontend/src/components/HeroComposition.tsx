@@ -69,9 +69,13 @@ const LAYERS: LayerItem[] = [
   },
 ];
 
-export function HeroComposition() {
-  const [selectedLayer, setSelectedLayer] = useState<string>('models');
-  const active = LAYERS.find(l => l.id === selectedLayer) || LAYERS[1];
+interface HeroCompositionProps {
+  version?: string;
+}
+
+export function HeroComposition({ version = '1.0.0' }: HeroCompositionProps = {}) {
+  const [selectedLayer, setSelectedLayer] = useState<string>('datasets');
+  const active = LAYERS.find(l => l.id === selectedLayer) || LAYERS[0];
 
   return (
     <div className="relative w-full max-w-xl mx-auto select-none">
@@ -92,7 +96,7 @@ export function HeroComposition() {
               SHA-256 HASH CHAIN
             </span>
             <span className="px-2 py-0.5 rounded bg-surface-3 border border-[var(--border)] text-2 font-semibold">
-              v1.0.4
+              v{version}
             </span>
           </div>
         </div>
@@ -178,12 +182,17 @@ export function HeroComposition() {
             </div>
 
             {/* Active Layer Hash Footer */}
-            <div className="mt-2.5 pt-2 border-t border-[var(--border)] flex items-center justify-between text-[10px] font-mono text-3">
-              <span className="flex items-center gap-1 text-2 truncate max-w-[280px]">
-                <Hash className="w-3 h-3 text-accent flex-shrink-0" />
-                {active.hash}
-              </span>
-              <span className="text-[9px] uppercase tracking-wider text-accent font-semibold flex items-center gap-0.5">
+            <div className="mt-2.5 pt-2 border-t border-[var(--border)] flex items-center justify-between text-[10px] font-mono text-3 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="flex items-center gap-1 text-2 truncate max-w-[200px] sm:max-w-[260px]">
+                  <Hash className="w-3 h-3 text-accent flex-shrink-0" />
+                  {active.hash}
+                </span>
+                <span className="text-[9px] font-sans px-1.5 py-0.5 rounded bg-surface border border-[var(--border)] text-3 flex-shrink-0 tracking-normal font-medium">
+                  Illustrative Spec
+                </span>
+              </div>
+              <span className="text-[9px] uppercase tracking-wider text-accent font-semibold flex items-center gap-0.5 flex-shrink-0">
                 ASSURANCE SPEC
                 <ArrowUpRight className="w-3 h-3" />
               </span>

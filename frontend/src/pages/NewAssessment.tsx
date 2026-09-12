@@ -90,18 +90,41 @@ function Select({ label, id, value, onChange, options }: {
   );
 }
 
+function getShortDetectorId(id: string): string {
+  const lower = id.toLowerCase();
+  if (lower.includes('di01') || id === 'DI-01') return 'DI-01';
+  if (lower.includes('mi01') || id === 'MI-01') return 'MI-01';
+  if (lower.includes('pi01') || id === 'PI-01') return 'PI-01';
+  if (lower.includes('at01') || id === 'AT-01') return 'AT-01';
+  const match = id.match(/([a-z]{2})[-_]?(\d{2})/i);
+  if (match) return `${match[1].toUpperCase()}-${match[2]}`;
+  const parts = id.split('.');
+  const lastPart = parts[parts.length - 1];
+  return lastPart.length <= 6 ? lastPart.toUpperCase() : lastPart.slice(0, 5).toUpperCase();
+}
+
 function DetectorRow({ d }: { d: DetectorCapabilitySchema }) {
+  const shortId = getShortDetectorId(d.detector_id);
+  const displayName = d.name.replace(new RegExp(`^${shortId}:?\\s*`, 'i'), '');
+
   return (
-    <div className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-      <div className="flex items-center gap-2 min-w-0">
-        <code className="text-[10px] font-mono font-semibold text-accent w-10 flex-shrink-0">{d.detector_id}</code>
-        <span className="text-xs text-2 truncate">{d.name}</span>
+    <div className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0 gap-2">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <code className="text-[10px] font-mono font-semibold text-accent px-1.5 py-0.5 rounded bg-accent/10 flex-shrink-0 tracking-wider">
+          {shortId}
+        </code>
+        <span className="text-xs text-2 truncate" title={d.name}>
+          {displayName}
+        </span>
         <span className="text-[10px] text-3 flex-shrink-0">(optional)</span>
       </div>
-      <div className={cn(
-        'flex-shrink-0 w-1.5 h-1.5 rounded-full',
-        d.available ? 'bg-[var(--green)]' : 'bg-[var(--border-strong)]',
-      )} />
+      <div
+        className={cn(
+          'flex-shrink-0 w-1.5 h-1.5 rounded-full',
+          d.available ? 'bg-[var(--green)]' : 'bg-[var(--border-strong)]',
+        )}
+        title={d.available ? 'Available' : 'Unavailable'}
+      />
     </div>
   );
 }
@@ -465,7 +488,7 @@ export function NewAssessment() {
                 <div className="space-y-2 py-1">
                   {['DI-01', 'MI-01', 'PI-01'].map(id => (
                     <div key={id} className="flex items-center gap-2 py-2 text-xs text-3">
-                      <code className="font-mono text-accent w-10">{id}</code>
+                      <code className="text-[10px] font-mono font-semibold text-accent px-1.5 py-0.5 rounded bg-accent/10 flex-shrink-0 tracking-wider">{id}</code>
                       <span>–</span>
                     </div>
                   ))}
