@@ -167,6 +167,7 @@ class Sample(BaseModel):
     height: int | None = None
     file_size_bytes: int = Field(ge=0)
     labels: list[str] = Field(default_factory=list, description="Assigned class labels")
+    contributor: str | None = Field(default=None, description="Contributor or source origin if known")
 
     model_config = {"from_attributes": True}
 

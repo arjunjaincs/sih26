@@ -121,6 +121,7 @@ class AssessmentRequest:
 
     # Model
     model_path: Path | None = None
+    model_reference_path: Path | None = None
     model_reference_fingerprint: dict[str, Any] | None = None
 
     # Provenance

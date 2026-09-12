@@ -57,7 +57,15 @@ from backend.audit.integration import make_audit_service
 from backend.audit.verifier import ChainVerifier
 from backend.detectors.base import DetectorContext, DetectorOutput
 from backend.detectors.data.di01_duplicates import DI01DuplicateDetector
+from backend.detectors.data.di02_label_integrity import DI02LabelIntegrityDetector
+from backend.detectors.data.di03_trigger_anomaly import DI03TriggerAnomalyDetector
+from backend.detectors.data.di04_ood_distribution import DI04DistributionOODDetector
+from backend.detectors.data.di05_contributor_risk import DI05ContributorRiskDetector
 from backend.detectors.model.mi01_fingerprint import MI01Context, MI01FingerprintDetector
+from backend.detectors.model.mi02_parameter_stats import MI02Context, MI02ParameterStatsDetector
+from backend.detectors.model.mi03_activation_stats import MI03Context, MI03ActivationStatsDetector
+from backend.detectors.model.mi04_reference_comparison import MI04Context, MI04ReferenceComparisonDetector
+from backend.detectors.model.mi05_trigger_anomaly import MI05Context, MI05TriggerAnomalyDetector
 from backend.detectors.provenance.pi01_integrity import PI01Context, PI01ProvenanceIntegrityDetector
 from backend.detectors.runner import run_detector
 from backend.domain.entities import Assessment, Asset, Dataset, ModelArtifact
@@ -550,41 +558,108 @@ class AssessmentService:
         """
         plans: list[dict[str, Any]] = []
 
-        # --- DI-01: dataset ---
-        if dataset_asset_id is not None:
-            plans.append({
-                "detector":       DI01DuplicateDetector(),
-                "asset_id":       dataset_asset_id,
-                "applicable":     True,
-                "context_extras": {
+        # --- DI-01..DI-05: dataset integrity suite ---
+        dataset_detectors = [
+            (
+                DI01DuplicateDetector(),
+                {
                     "phash_threshold": request.phash_threshold,
                     "dhash_threshold": request.dhash_threshold,
                 },
-            })
-        else:
-            plans.append({
-                "detector":                DI01DuplicateDetector(),
-                "asset_id":                None,
-                "applicable":              False,
-                "context_extras":          {},
-                "not_applicable_reason":   "no_dataset_provided",
-            })
+            ),
+            (DI02LabelIntegrityDetector(), {}),
+            (DI03TriggerAnomalyDetector(), {}),
+            (DI04DistributionOODDetector(), {}),
+            (DI05ContributorRiskDetector(), {}),
+        ]
+        for det, extras in dataset_detectors:
+            if dataset_asset_id is not None:
+                plans.append({
+                    "detector":       det,
+                    "asset_id":       dataset_asset_id,
+                    "applicable":     True,
+                    "context_extras": extras,
+                })
+            else:
+                plans.append({
+                    "detector":              det,
+                    "asset_id":              None,
+                    "applicable":            False,
+                    "context_extras":        {},
+                    "not_applicable_reason": "no_dataset_provided",
+                })
 
-        # --- MI-01: model ---
-        if model_asset_id is not None:
-            mi01_ctx = MI01Context(
-                model_path=request.model_path,
-                reference_fingerprint=request.model_reference_fingerprint,
-            )
+        # --- MI-01, MI-02, MI-03, MI-05: general model integrity detectors ---
+        has_model = model_asset_id is not None
+        base_mi_detectors = [
+            (
+                MI01FingerprintDetector(),
+                {
+                    "mi01": MI01Context(
+                        model_path=request.model_path,
+                        reference_fingerprint=request.model_reference_fingerprint,
+                    )
+                },
+            ),
+            (
+                MI02ParameterStatsDetector(),
+                {"mi02": MI02Context(model_path=request.model_path)},
+            ),
+            (
+                MI03ActivationStatsDetector(),
+                {"mi03": MI03Context(model_path=request.model_path)},
+            ),
+            (
+                MI05TriggerAnomalyDetector(),
+                {"mi05": MI05Context(model_path=request.model_path)},
+            ),
+        ]
+        for det, extras in base_mi_detectors:
+            if has_model:
+                plans.append({
+                    "detector":       det,
+                    "asset_id":       model_asset_id,
+                    "applicable":     True,
+                    "context_extras": extras,
+                })
+            else:
+                plans.append({
+                    "detector":              det,
+                    "asset_id":              None,
+                    "applicable":            False,
+                    "context_extras":        {},
+                    "not_applicable_reason": "no_model_provided",
+                })
+
+        # --- MI-04: reference model comparison (applicable only when reference supplied) ---
+        has_reference = (
+            request.model_reference_path is not None
+            or request.model_reference_fingerprint is not None
+        )
+        if has_model and has_reference:
             plans.append({
-                "detector":       MI01FingerprintDetector(),
+                "detector":       MI04ReferenceComparisonDetector(),
                 "asset_id":       model_asset_id,
                 "applicable":     True,
-                "context_extras": {"mi01": mi01_ctx},
+                "context_extras": {
+                    "mi04": MI04Context(
+                        model_path=request.model_path,
+                        reference_model_path=request.model_reference_path,
+                        reference_fingerprint=request.model_reference_fingerprint,
+                    )
+                },
+            })
+        elif has_model:
+            plans.append({
+                "detector":              MI04ReferenceComparisonDetector(),
+                "asset_id":              model_asset_id,
+                "applicable":            False,
+                "context_extras":        {},
+                "not_applicable_reason": "no_reference_model_provided",
             })
         else:
             plans.append({
-                "detector":              MI01FingerprintDetector(),
+                "detector":              MI04ReferenceComparisonDetector(),
                 "asset_id":              None,
                 "applicable":            False,
                 "context_extras":        {},
@@ -755,10 +830,50 @@ class AssessmentService:
                 "impact":              "duplicate_flooding_not_assessed",
                 "recommended_action":  "provide a dataset and run ingestion before assessment",
             },
+            "data.integrity.di02_label_integrity": {
+                "required_capability": "dataset with annotated class labels (>= 2 labeled samples)",
+                "impact":              "label_flipping_and_mislabelling_not_assessed",
+                "recommended_action":  "provide a dataset with annotations (COCO format or label metadata) to evaluate label integrity",
+            },
+            "data.integrity.di03_trigger_anomaly": {
+                "required_capability": "dataset with >= 3 image samples for recurring spatial patch analysis",
+                "impact":              "trigger_injection_and_backdoor_patterns_not_assessed",
+                "recommended_action":  "provide at least 3 samples to evaluate spatial trigger anomalies",
+            },
+            "data.integrity.di04_ood_distribution": {
+                "required_capability": "dataset with >= 5 image samples for statistical distribution analysis",
+                "impact":              "out_of_distribution_and_anomalous_samples_not_assessed",
+                "recommended_action":  "provide at least 5 samples to establish distribution baseline",
+            },
+            "data.integrity.di05_contributor_risk": {
+                "required_capability": "dataset with contributor/source attribution metadata on samples",
+                "impact":              "contributor_source_risk_not_assessed",
+                "recommended_action":  "include contributor/source attribution in dataset metadata or directory structure",
+            },
             "model.integrity.mi01_fingerprint": {
-                "required_capability": "compatible model file (.onnx/.pt/.pth) and model_path in request",
+                "required_capability": "compatible model file (.onnx/.pt/.pth/.ts) and model_path in request",
                 "impact":              "model_integrity_not_assessed",
                 "recommended_action":  "provide a compatible model file (ONNX preferred for full analysis)",
+            },
+            "model.integrity.mi02_parameter_stats": {
+                "required_capability": "compatible model file (.onnx/.pt/.pth/.ts) with inspectable parameter tensors",
+                "impact":              "parameter_statistics_and_weight_integrity_not_assessed",
+                "recommended_action":  "provide a compatible model file to inspect parameter distributions and corruption",
+            },
+            "model.integrity.mi03_activation_stats": {
+                "required_capability": "executable model graph (.onnx or .ts) for intermediate activation tracing",
+                "impact":              "internal_representation_and_activation_health_not_assessed",
+                "recommended_action":  "provide an executable ONNX or TorchScript model to evaluate activation health",
+            },
+            "model.integrity.mi04_reference_comparison": {
+                "required_capability": "baseline reference model file or stored reference fingerprint profile",
+                "impact":              "reference_model_comparison_and_drift_not_assessed",
+                "recommended_action":  "supply a reference model artifact or reference fingerprint for comparative battery",
+            },
+            "model.integrity.mi05_trigger_anomaly": {
+                "required_capability": "executable model (.onnx or .ts) for behavioral perturbation testing",
+                "impact":              "trigger_sensitivity_and_backdoor_convergence_not_assessed",
+                "recommended_action":  "provide an executable ONNX or TorchScript model to test candidate trigger perturbations",
             },
             "inference.provenance.pi01_integrity": {
                 "required_capability": "signed ProvenanceManifest and Ed25519 public key",

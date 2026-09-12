@@ -51,14 +51,24 @@ def db(tmp_path: Path) -> sqlite3.Connection:
 
 @pytest.fixture
 def image_dir(tmp_path: Path) -> Path:
-    """Minimal image directory with 3 unique images."""
-    from PIL import Image
+    """Minimal complete image directory with 5 unique images, labels, and contributors."""
+    from PIL import Image, ImageDraw
     img_dir = tmp_path / "images"
     img_dir.mkdir()
-    for i in range(3):
-        # Create genuinely distinct images
-        img = Image.new("RGB", (64, 64), color=(i * 80, i * 40, 255 - i * 80))
-        img.save(img_dir / f"img_{i:03d}.jpg", "JPEG")
+    labels = {}
+    contributors = {}
+    for i in range(5):
+        # Create genuinely distinct images with distinct patterns and hashes
+        img = Image.new("RGB", (64, 64), color=(120, 120, 120))
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([i * 10, i * 8, i * 10 + 15, i * 8 + 15], fill=(200, 50 + i * 30, 200 - i * 30))
+        fname = f"img_{i:03d}.png"
+        img.save(img_dir / fname, "PNG")
+        labels[fname] = f"class_{i}"
+        contributors[fname] = f"source_{i % 2}"
+    (img_dir / "metadata.json").write_text(
+        json.dumps({"labels": labels, "contributors": contributors})
+    )
     return img_dir
 
 
@@ -825,3 +835,110 @@ class TestAntiFakeAndDeterminism:
                                 f"Evidence references phantom sample ID {sid!r} "
                                 f"not found among {len(known_ids)} real samples"
                             )
+
+
+class TestPhase11TrainingDataIntegritySuite:
+    """End-to-end tests for Phase 11 PS Compliance (DI-01..DI-05)."""
+
+    def test_all_five_dataset_detectors_execute_on_complete_dataset(
+        self, db: sqlite3.Connection, image_dir: Path
+    ):
+        req = AssessmentRequest(
+            title="Complete Dataset Integrity",
+            dataset_path=image_dir,
+            dataset_format=DatasetFormat.IMAGE_DIR,
+        )
+        result = run_assessment(req, db)
+        assert result.status == AssessmentState.COMPLETE
+        assert "data.integrity.di01_duplicates" in result.detectors_executed
+        assert "data.integrity.di02_label_integrity" in result.detectors_executed
+        assert "data.integrity.di03_trigger_anomaly" in result.detectors_executed
+        assert "data.integrity.di04_ood_distribution" in result.detectors_executed
+        assert "data.integrity.di05_contributor_risk" in result.detectors_executed
+        assert result.coverage_fraction == 1.0
+        assert len(result.coverage_gaps) == 0
+
+    def test_unannotated_dataset_emits_coverage_gaps(
+        self, db: sqlite3.Connection, tmp_path: Path
+    ):
+        """Plain directory without labels or contributors produces explicit CoverageGaps."""
+        from PIL import Image
+        unannotated_dir = tmp_path / "plain_images"
+        unannotated_dir.mkdir()
+        for i in range(3):
+            Image.new("RGB", (64, 64), color=(i * 30, i * 40, i * 50)).save(
+                unannotated_dir / f"img_{i}.jpg", "JPEG"
+            )
+
+        req = AssessmentRequest(
+            title="Unannotated Dataset",
+            dataset_path=unannotated_dir,
+            dataset_format=DatasetFormat.IMAGE_DIR,
+        )
+        result = run_assessment(req, db)
+        assert result.status == AssessmentState.COMPLETE
+
+        gap_detector_ids = [g.detector_id for g in result.coverage_gaps]
+        assert "data.integrity.di02_label_integrity" in gap_detector_ids
+        assert "data.integrity.di05_contributor_risk" in gap_detector_ids
+        assert result.coverage_fraction < 1.0
+        assert len(result.limitations) > 0
+
+
+class TestPhase12ModelIntegritySuite:
+    """End-to-end tests for Phase 12 PS Compliance (MI-01..MI-05)."""
+
+    def test_all_executable_model_detectors_run(
+        self, db: sqlite3.Connection, onnx_model: Path
+    ):
+        req = AssessmentRequest(
+            title="Complete Model Integrity",
+            model_path=onnx_model,
+        )
+        result = run_assessment(req, db)
+        assert result.status == AssessmentState.COMPLETE
+        assert "model.integrity.mi01_fingerprint" in result.detectors_executed
+        assert "model.integrity.mi02_parameter_stats" in result.detectors_executed
+        assert "model.integrity.mi03_activation_stats" in result.detectors_executed
+        assert "model.integrity.mi05_trigger_anomaly" in result.detectors_executed
+        assert result.coverage_fraction == 1.0
+        assert len(result.coverage_gaps) == 0
+
+    def test_reference_model_battery_runs_when_reference_supplied(
+        self, db: sqlite3.Connection, onnx_model: Path
+    ):
+        req = AssessmentRequest(
+            title="Ref Model Battery",
+            model_path=onnx_model,
+            model_reference_path=onnx_model,
+        )
+        result = run_assessment(req, db)
+        assert result.status == AssessmentState.COMPLETE
+        assert "model.integrity.mi04_reference_comparison" in result.detectors_executed
+        assert result.coverage_fraction == 1.0
+        assert len(result.coverage_gaps) == 0
+
+    def test_pytorch_state_dict_emits_activation_and_trigger_coverage_gaps(
+        self, db: sqlite3.Connection, tmp_path: Path
+    ):
+        import torch
+        pt_path = tmp_path / "model.pt"
+        torch.save({"layer.weight": torch.randn(4, 4), "layer.bias": torch.zeros(4)}, pt_path)
+
+        req = AssessmentRequest(
+            title="PyTorch State Dict Assessment",
+            model_path=pt_path,
+        )
+        result = run_assessment(req, db)
+        assert result.status == AssessmentState.COMPLETE
+
+        # MI-01 and MI-02 succeed on state dicts
+        assert "model.integrity.mi01_fingerprint" in result.detectors_executed
+        assert "model.integrity.mi02_parameter_stats" in result.detectors_executed
+
+        # MI-03 and MI-05 emit honest coverage gaps for non-executable state dicts
+        gap_ids = [g.detector_id for g in result.coverage_gaps]
+        assert "model.integrity.mi03_activation_stats" in gap_ids
+        assert "model.integrity.mi05_trigger_anomaly" in gap_ids
+        assert result.coverage_fraction < 1.0
+        assert len(result.limitations) >= 2

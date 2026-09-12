@@ -274,3 +274,56 @@ def make_add_bias_model(
 
     graph = _graph("add_bias_graph", [add], [x_vi], [y_vi], initializers=[bias_init])
     return _model(graph)
+
+
+def make_nan_bias_model(input_shape: list[int] | None = None) -> bytes:
+    """Create an ONNX model with a NaN weight in its initializer."""
+    if input_shape is None:
+        input_shape = [1, 3]
+    return make_add_bias_model([float("nan")] * input_shape[-1], input_shape=input_shape)
+
+
+def make_inf_bias_model(input_shape: list[int] | None = None) -> bytes:
+    """Create an ONNX model with an Inf weight in its initializer."""
+    if input_shape is None:
+        input_shape = [1, 3]
+    return make_add_bias_model([float("inf")] * input_shape[-1], input_shape=input_shape)
+
+
+def make_extreme_bias_model(input_shape: list[int] | None = None) -> bytes:
+    """Create an ONNX model with extreme weight magnitude (|w| > 1e5)."""
+    if input_shape is None:
+        input_shape = [1, 3]
+    return make_add_bias_model([1e5, -1e5, 2e5][: input_shape[-1]], input_shape=input_shape)
+
+
+def make_multi_layer_model(input_shape: list[int] | None = None) -> bytes:
+    """Create a 2-node ONNX model: H = Add(X, B), Y = Relu(H)."""
+    if input_shape is None:
+        input_shape = [1, 3]
+
+    x_vi = _value_info("X", input_shape)
+    y_vi = _value_info("Y", input_shape)
+    bias_init = _initializer_float("B", input_shape, [0.5] * input_shape[-1])
+
+    add = _node("Add", ["X", "B"], ["H"])
+    relu = _node("Relu", ["H"], ["Y"])
+
+    graph = _graph("multi_layer_graph", [add, relu], [x_vi], [y_vi], initializers=[bias_init])
+    return _model(graph)
+
+
+def make_dead_representation_model(input_shape: list[int] | None = None) -> bytes:
+    """Create an ONNX model where all outputs are clamped to 0: Y = Relu(X + (-1000))."""
+    if input_shape is None:
+        input_shape = [1, 3]
+
+    x_vi = _value_info("X", input_shape)
+    y_vi = _value_info("Y", input_shape)
+    bias_init = _initializer_float("B", input_shape, [-1000.0] * input_shape[-1])
+
+    add = _node("Add", ["X", "B"], ["H"])
+    relu = _node("Relu", ["H"], ["Y"])
+
+    graph = _graph("dead_repr_graph", [add, relu], [x_vi], [y_vi], initializers=[bias_init])
+    return _model(graph)

@@ -26,178 +26,185 @@ Last Updated: 2026-09-10
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `di.phash_duplicates` |
+| **Detector ID** | `data.integrity.di01_duplicates` |
 | **PS Requirement** | Near-duplicate flooding |
-| **Category** | DATA_INTEGRITY |
-| **Method** | Compute pHash and dHash for every sample. Flag pairs with Hamming distance ≤ threshold (default: 10 bits for pHash-64). Cluster near-duplicates. |
-| **Required Access** | Dataset with images |
-| **Evidence Produced** | List of near-duplicate pairs/clusters with distances, visualization of clusters |
-| **Implementation Status** | PLANNED (Phase 1) |
-| **Dependencies** | `imagehash`, `Pillow` |
-| **Confidence Semantics** | High: threshold is deterministic. Confidence reflects sample coverage, not detection accuracy. |
-| **Limitations** | Cannot detect semantic duplicates with different visual appearance. Threshold is heuristic. Very large datasets may be slow without LSH indexing. |
-| **Test Strategy** | Inject known duplicate pairs at various Hamming distances; verify detection at each threshold. |
+| **Category** | `DATA_INTEGRITY` |
+| **Method** | Exact byte match (SHA-256) and perceptual near-duplicate clustering via 64-bit DCT pHash and dHash Hamming distance graph clustering (Union-Find). |
+| **Required Access** | Dataset with images (offline local directory or COCO archive) |
+| **Evidence Produced** | Duplicate clusters with representative hash, max Hamming distance, sample IDs, and file names (`EvidenceType.ANOMALY`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `Pillow`, `numpy` |
+| **Risk Semantics** | HIGH for exact byte duplicate clusters with size ≥ 3 or high duplicate ratios; MEDIUM for near-duplicate clusters; NONE if no duplicate clusters found. |
+| **Confidence Semantics** | HIGH for deterministic hash collisions. Scaled by dataset size (ADR-003). |
+| **Coverage Semantics** | Applicable when dataset asset provided. Evaluated across all readable images. |
+| **Limitations** | Pixel and perceptual spatial frequency analysis only. Does not infer high-level semantic equivalence under severe non-linear photomorphic changes. |
+| **Test Strategy** | Programmatic test battery: exact byte duplicates, perceptual near-duplicates (DCT variations), clean unique images, corrupt image handling. |
 
-### DI-02: Embedding-Based Similarity Analysis
-
-| Attribute | Value |
-|-----------|-------|
-| **Detector ID** | `di.embedding_similarity` |
-| **PS Requirement** | Near-duplicate flooding, OOD insertion |
-| **Category** | DATA_INTEGRITY |
-| **Method** | Extract embeddings from a pretrained vision model (e.g., ResNet-50 penultimate layer). Compute pairwise cosine similarity. Flag clusters of unusually high similarity (flooding) or samples far from any cluster centroid (OOD). |
-| **Required Access** | Dataset with images |
-| **Evidence Produced** | Similarity matrix statistics, identified clusters, OOD candidates with distances |
-| **Implementation Status** | PLANNED (Phase 2) |
-| **Dependencies** | `torch`, `torchvision` |
-| **Confidence Semantics** | Moderate: embedding quality depends on backbone model and domain fit. |
-| **Limitations** | Backbone model may not capture domain-specific features. Requires loading a pretrained model (but this is a PRAMAAN internal model, not the model under assessment). |
-| **Test Strategy** | Insert known OOD images from a different domain; verify they are flagged. Insert duplicates with augmentation; verify clustering. |
-
-### DI-03: Label Anomaly Detection
+### DI-02: Label Integrity & Systematic Mislabelling
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `di.label_anomaly` |
+| **Detector ID** | `data.integrity.di02_label_integrity` |
 | **PS Requirement** | Label flipping / systematic mislabelling |
-| **Category** | DATA_INTEGRITY |
-| **Method** | Cross-reference image embeddings against assigned labels. Identify samples whose embedding is far from the centroid of their assigned class but close to another class. Report as candidate label flips. Statistical test for systematic class-to-class flipping patterns. |
-| **Required Access** | Dataset with images AND labels |
-| **Evidence Produced** | List of suspect samples, embedding distances, suggested correct labels, class confusion matrix |
-| **Implementation Status** | PLANNED (Phase 2) |
-| **Dependencies** | `torch`, `torchvision`, `numpy`, `scipy` |
-| **Confidence Semantics** | Moderate: depends on embedding quality and class separability. |
-| **Limitations** | Ambiguous samples near class boundaries will generate false positives. Requires classes to be visually distinguishable. |
-| **Test Strategy** | Flip labels for N% of samples in a known dataset; measure recall and precision at various N. |
+| **Category** | `DATA_INTEGRITY` |
+| **Method** | Two-tier analysis: (1) Near-duplicate label conflict detection: pairwise pHash comparison (Hamming ≤ 4) across samples with disjoint class labels; (2) Statistical class centroid outlier detection: bit-vector centroid distance per class compared against alternative class centroids to identify candidate label flips. |
+| **Required Access** | Dataset with images AND class label annotations (COCO format or directory metadata/labels mapping, min 2 labeled samples) |
+| **Evidence Produced** | Near-duplicate label conflict records with sample IDs and conflicting classes (`EvidenceType.ANOMALY`), Class centroid outlier projections with nearest-class distance comparison (`EvidenceType.STATISTICAL_TEST`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `Pillow`, `numpy` |
+| **Risk Semantics** | HIGH for direct contradictory labels on visually identical images; MEDIUM for statistical centroid flips to alternative classes; NONE if label assignments are consistent. |
+| **Confidence Semantics** | HIGH for near-duplicate label contradictions; MODERATE for statistical centroid flips (dependent on class compactness). |
+| **Coverage Semantics** | Emits `CoverageGap` (`label_flipping_and_mislabelling_not_assessed`) when dataset lacks annotations or contains < 2 labeled samples. |
+| **Limitations** | Requires explicit class labels. Does not verify ground-truth semantic truth without external verified reference labels. Multi-modal class distributions may exhibit dispersion. |
+| **Test Strategy** | Programmatic tests for clean labeled data, identical images with contradictory labels, statistical centroid flips with nearest-class matching, and missing-label pre-flight checks. |
 
-### DI-04: Contributor Risk Aggregation
-
-| Attribute | Value |
-|-----------|-------|
-| **Detector ID** | `di.contributor_aggregation` |
-| **PS Requirement** | Contributor/source-level risk aggregation |
-| **Category** | DATA_INTEGRITY |
-| **Method** | Aggregate sample-level findings by contributor. Compute per-contributor risk metrics: flagged sample rate, dominant finding categories, severity distribution. Flag contributors whose flagged rate exceeds threshold. |
-| **Required Access** | Dataset with contributor attribution |
-| **Evidence Produced** | Per-contributor risk summary, comparison to overall dataset rates |
-| **Implementation Status** | PLANNED (Phase 2) |
-| **Dependencies** | None beyond core domain |
-| **Confidence Semantics** | Depends on confidence of underlying sample-level detectors. |
-| **Limitations** | Requires contributor metadata in dataset manifest. Small contributors have insufficient statistical power. |
-| **Test Strategy** | Create dataset with one "malicious" contributor inserting known-bad samples; verify contributor is flagged. |
-
-### DI-05: OOD / Anomaly Detection (Statistical)
+### DI-03: Trigger & Spatial Pattern Anomaly Detection
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `di.ood_statistical` |
+| **Detector ID** | `data.integrity.di03_trigger_anomaly` |
+| **PS Requirement** | Trigger injection |
+| **Category** | `DATA_INTEGRITY` |
+| **Method** | Multi-region spatial patch extraction (4 corners: top-left, top-right, bottom-left, bottom-right, and center; 16x16 / 25% bounding boxes). Computes local patch dHash and intensity variance. Flags high-contrast, non-flat localized patterns that recur across ≥ 3 distinct images. |
+| **Required Access** | Dataset with images (at least 3 samples required) |
+| **Evidence Produced** | Recurring spatial patch findings with bounding box coordinates, patch dHash, occurrence frequency, variance metric, and affected sample IDs (`EvidenceType.ANOMALY`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `Pillow`, `numpy` |
+| **Risk Semantics** | HIGH if recurring patch appears in ≥ 20% of dataset or ≥ 5 images; MEDIUM if recurring patch appears in ≥ 3 images; NONE if no recurring localized patches detected. |
+| **Confidence Semantics** | HIGH for recurring localized high-contrast patches across distinct images. |
+| **Coverage Semantics** | Emits `CoverageGap` (`trigger_injection_and_backdoor_patterns_not_assessed`) if dataset has < 3 samples. |
+| **Limitations** | Detects localized spatial trigger patterns (stickers, watermarks, corners). Does not detect invisible blended, low-amplitude, or full-image sinusoidal backdoor perturbations without reference models. |
+| **Test Strategy** | Programmatic tests for clean diverse images, synthetic corner checkerboard trigger injection across samples, low-variance corner filtering, and pre-flight sample count boundaries. |
+
+### DI-04: Distribution Shift & Out-of-Distribution (OOD) Detection
+
+| Attribute | Value |
+|-----------|-------|
+| **Detector ID** | `data.integrity.di04_ood_distribution` |
 | **PS Requirement** | OOD insertion |
-| **Category** | DATA_INTEGRITY |
-| **Method** | Fit a multivariate Gaussian (or GMM) to the embedding distribution of the declared dataset. Score each sample by Mahalanobis distance. Flag samples exceeding a threshold (e.g., 99.5th percentile of the fitted distribution). |
-| **Required Access** | Dataset with images |
-| **Evidence Produced** | Mahalanobis distance per sample, threshold used, distribution fit statistics |
-| **Implementation Status** | PLANNED (Phase 2) |
-| **Dependencies** | `torch`, `torchvision`, `numpy`, `scipy` |
-| **Confidence Semantics** | Moderate: Gaussian assumption may not hold for complex distributions. |
-| **Limitations** | Assumes approximately Gaussian embedding distribution. High dimensionality may degrade Mahalanobis distance. |
-| **Test Strategy** | Insert images from ImageNet into a COCO subset; verify they are flagged as OOD. |
+| **Category** | `DATA_INTEGRITY` |
+| **Method** | Computes 6-dimensional perceptual feature vector per sample: aspect ratio, file size density (bytes/pixel), RGB channel means, and luminance standard deviation. Computes robust median and Interquartile Range (IQR) standardized distances. Flags samples exceeding robust distance threshold (threshold: 3.5 IQR units). |
+| **Required Access** | Dataset with images (at least 5 samples required for baseline estimation) |
+| **Evidence Produced** | Outlier sample listings with distance metric, threshold, baseline median, and breakdown of anomalous dimensions (`EvidenceType.STATISTICAL_TEST`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `Pillow`, `numpy` |
+| **Risk Semantics** | MEDIUM if ≥ 2 outliers or distance ≥ 5.0; LOW if single moderate outlier detected; NONE if all samples fall within in-distribution baseline. |
+| **Confidence Semantics** | MODERATE: heuristic in perceptual feature space. Confidence reflects sample volume and baseline stability. |
+| **Coverage Semantics** | Emits `CoverageGap` (`out_of_distribution_and_anomalous_samples_not_assessed`) if dataset has < 5 samples. |
+| **Limitations** | Evaluates low-level visual and geometric distribution parameters. Does not perform high-level semantic OOD classification without large pre-trained embedding foundation models. |
+| **Test Strategy** | Programmatic tests for in-distribution baseline samples, extreme aspect ratio and inverted color outliers, sample size pre-flight thresholds, and determinism. |
+
+### DI-05: Contributor / Source Risk Aggregation
+
+| Attribute | Value |
+|-----------|-------|
+| **Detector ID** | `data.integrity.di05_contributor_risk` |
+| **PS Requirement** | Contributor/source risk aggregation |
+| **Category** | `DATA_INTEGRITY` |
+| **Method** | Cross-correlates all sample-level findings and evidence (from DI-01, DI-02, DI-03, DI-04) grouped by contributor/source origin. Identifies disproportionate defect concentrations where contributor defect rate $R_c \ge 30\%$ with $\ge 2$ defects and $R_c > 1.5 R_{\text{all}}$. Produces global multi-contributor risk summary. |
+| **Required Access** | Dataset with contributor/source attribution (COCO annotations, subdirectories, or metadata.json) |
+| **Evidence Produced** | Contributor defect concentration metrics (`EvidenceType.STATISTICAL_TEST`), Multi-contributor breakdown matrix comparing all identified sources (`EvidenceType.COMPARISON`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, SQLite database |
+| **Risk Semantics** | HIGH if contributor defect rate ≥ 50% with ≥ 3 defects; MEDIUM if defect rate ≥ 30% with ≥ 2 defects; NONE if defects are distributed proportionally or zero defects found. |
+| **Confidence Semantics** | HIGH: based on verified sample defect records aggregated from upstream detectors. |
+| **Coverage Semantics** | Emits `CoverageGap` (`contributor_source_risk_not_assessed`) when dataset lacks contributor metadata. |
+| **Limitations** | Attribution relies strictly on declared dataset metadata. If attribution is absent, reports that attribution is unavailable rather than inventing origins. Does not prove malicious intent. |
+| **Test Strategy** | Programmatic tests for clean multi-contributor datasets, single contributor with concentrated defects, unattributed datasets, and multi-contributor comparative breakdown evidence. |
 
 ---
 
 ## 3. Model Integrity Methods
 
-### MI-01: Artifact Fingerprinting
+### MI-01: Model Integrity Fingerprinting & Multi-Layer Comparison
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `mi.artifact_fingerprint` |
-| **PS Requirement** | Model substitution |
-| **Category** | MODEL_INTEGRITY |
-| **Method** | SHA-256 hash of the model file. Compare against declared/registered hash. Flag mismatch. |
-| **Required Access** | BLACK_BOX (file-level) |
-| **Evidence Produced** | Expected hash, actual hash, match/mismatch |
-| **Implementation Status** | PLANNED (Phase 1) |
-| **Dependencies** | `hashlib` (stdlib) |
-| **Confidence Semantics** | HIGH: SHA-256 collision is infeasible. |
-| **Limitations** | Only detects file-level substitution. Does not detect partial weight modification within a valid model file. |
-| **Test Strategy** | Modify one byte of a model file; verify hash mismatch is detected. |
+| **Detector ID** | `model.integrity.mi01_fingerprint` |
+| **PS Requirement** | Detect substituted/modified models, behavioral fingerprinting |
+| **Category** | `MODEL_INTEGRITY` |
+| **Method** | Multi-layer cryptographic, structural, and behavioral fingerprinting: Layer 1 (raw binary SHA-256 and file size), Layer 2 (graph topology, input/output schemas, node/initializer counts, opset versions, PyTorch state dict keys), Layer 3 (deterministic reference-input battery: zeros, ones, seeded noise, output SHA-256 and moments), Layer 4 (comparative delta against stored baseline fingerprint). |
+| **Required Access** | White-Box / Black-Box (ONNX runtime for behavioral, PyTorch weights_only for state dict) |
+| **Evidence Produced** | Artifact digest and metadata, structural graph properties, deterministic probe output hashes and moments (`EvidenceType.MEASUREMENT`), field-by-field difference delta (`EvidenceType.COMPARISON`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `numpy`, `onnxruntime`, `torch` |
+| **Risk Semantics** | MEDIUM if behavioral output divergence or structural mismatch detected; LOW if artifact hash differs but structure matches; NONE if all compared fields match reference or when recording baseline. |
+| **Confidence Semantics** | HIGH when structural and behavioral layers execute; MODERATE if behavioral layer unavailable; LOW if framework unavailable. |
+| **Coverage Semantics** | Emits explicit `CoverageGap` when model framework is unavailable or model format lacks execution class. |
+| **Limitations** | Behavioral battery requires an executable model format (ONNX or TorchScript). PyTorch raw state dicts cannot be executed without architecture code and are marked unavailable for execution. Differences indicate integrity deltas, not proof of malicious intent. |
+| **Test Strategy** | Programmatic tests for clean ONNX, byte modification, node count changes, operator type modifications, output value divergence, missing reference, and format loading boundaries. |
 
-### MI-02: Behavioral Consistency Testing
-
-| Attribute | Value |
-|-----------|-------|
-| **Detector ID** | `mi.behavioral_consistency` |
-| **PS Requirement** | Behavioral anomalies, backdoor-like behavior |
-| **Category** | MODEL_INTEGRITY |
-| **Method** | Run model on a reference battery of curated test inputs. Compare outputs against expected reference outputs. Flag significant deviations in accuracy, confidence distribution, or class distribution. |
-| **Required Access** | BLACK_BOX (inference access) |
-| **Evidence Produced** | Per-input output comparison, aggregate statistics, deviation metrics |
-| **Implementation Status** | PLANNED (Phase 2) |
-| **Dependencies** | `torch` or `onnxruntime`, `numpy` |
-| **Confidence Semantics** | Moderate: limited by reference battery coverage. Targeted backdoors may not activate on clean inputs. |
-| **Limitations** | Cannot detect backdoors that only trigger on specific inputs not in the reference battery. Battery design is critical. |
-| **Test Strategy** | Substitute a model with different weights; verify behavioral deviation is detected. |
-
-### MI-03: Parameter Statistics Analysis
+### MI-02: Model Parameter Statistics
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `mi.parameter_statistics` |
-| **PS Requirement** | Behavioral anomalies, backdoor detection |
-| **Category** | MODEL_INTEGRITY |
-| **Method** | Extract per-layer weight statistics (mean, std, min, max, sparsity, Frobenius norm). Compare against expected ranges or reference model. Flag anomalous layers. |
-| **Required Access** | WHITE_BOX |
-| **Evidence Produced** | Per-layer statistics table, anomalous layers, comparison to reference |
-| **Implementation Status** | PLANNED (Phase 2) |
-| **Dependencies** | `torch`, `numpy` |
-| **Confidence Semantics** | Low-Moderate: statistical anomalies do not confirm malicious modification. |
-| **Limitations** | No ground truth for "normal" parameter distributions without a reference. Fine-tuned models naturally deviate. |
-| **Test Strategy** | Inject a small trigger pattern into model weights; verify statistical anomaly in affected layer. |
+| **Detector ID** | `model.integrity.mi02_parameter_stats` |
+| **PS Requirement** | Parameter statistics, anomaly detection |
+| **Category** | `MODEL_INTEGRITY` |
+| **Method** | Deep white-box inspection of model parameter tensors across ONNX (initializers), PyTorch (`state_dict` via safe `weights_only=True`), and TorchScript. Computes total parameter counts, tensor counts, dtype distribution, and tensor moments (min, max, mean, std, sparsity % zeros). Detects non-finite values (NaN, +Inf, -Inf), extreme weight magnitudes ($|w| > 10,000$ or $\sigma > 1,000$), and abnormal layer collapse (> 99.9% zeros in non-bias layers). |
+| **Required Access** | White-Box (model file inspectable via safe deserialization) |
+| **Evidence Produced** | Global parameter summary metrics, dtype distribution, non-finite value counts, and per-tensor statistical summaries (`EvidenceType.MEASUREMENT`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `numpy`, `torch` (for PyTorch), fallback pure-Python protobuf parser for ONNX |
+| **Risk Semantics** | HIGH/CRITICAL if NaN or Inf values detected; MEDIUM if extreme weight magnitude anomaly; LOW if abnormal layer sparsity detected; NONE if parameters exhibit healthy distributions. |
+| **Confidence Semantics** | HIGH: direct mathematical measurement across all extracted model parameter tensors. |
+| **Coverage Semantics** | Emits `CoverageGap` (`parameter_statistics_and_weight_integrity_not_assessed`) if model file is corrupted or format unsupported. |
+| **Limitations** | Deep weight inspection requires inspectable parameter tensors. Does not infer semantic functionality of custom layer operations without architectural metadata. |
+| **Test Strategy** | Programmatic tests for clean ONNX/PyTorch models, synthetic NaN/Inf weight injection, extreme weight magnitude anomalies, sparsity calculation, and determinism. |
 
-### MI-04: Activation Analysis
-
-| Attribute | Value |
-|-----------|-------|
-| **Detector ID** | `mi.activation_analysis` |
-| **PS Requirement** | Behavioral anomalies, backdoor detection |
-| **Category** | MODEL_INTEGRITY |
-| **Method** | Register forward hooks on model layers. Pass reference inputs and collect activation maps. Analyze for unusual patterns: dead neurons, abnormally high activations, spatial concentration (trigger indicators). |
-| **Required Access** | WHITE_BOX (or GRAY_BOX if hooks are externally available) |
-| **Evidence Produced** | Activation statistics, spatial heat maps, anomaly scores per layer |
-| **Implementation Status** | PLANNED (Phase 3) |
-| **Dependencies** | `torch`, `numpy` |
-| **Confidence Semantics** | Low-Moderate: activation anomalies have many benign causes. |
-| **Limitations** | Only works with PyTorch models (hook API). Interpretation requires domain expertise. |
-| **Test Strategy** | Train a model with a known trigger patch; verify activation anomaly near trigger location. |
-
-### MI-05: Spectral Signature Analysis
+### MI-03: Model Activation & Representation Statistics
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `mi.spectral_signatures` |
-| **PS Requirement** | Backdoor detection (Tran et al., 2018) |
-| **Category** | MODEL_INTEGRITY |
-| **Method** | Compute representation vectors for a dataset of clean inputs. Perform SVD on the covariance matrix of representations. Outlier score based on top singular vector correlations. Poisoned samples correlate strongly with the top singular vector. |
-| **Required Access** | WHITE_BOX + reference dataset |
-| **Evidence Produced** | Singular value decomposition results, outlier scores, flagged samples |
-| **Implementation Status** | PLANNED (Phase 3) |
-| **Dependencies** | `torch`, `numpy`, `scipy` |
-| **Confidence Semantics** | Moderate: validated in research literature but depends on attack type. |
-| **Limitations** | Assumes poisoned samples form a separable cluster in representation space. May not detect all backdoor types (e.g., clean-label attacks). Requires reference dataset. Original paper: Tran, Li, Madry (NeurIPS 2018). |
-| **Test Strategy** | Insert known poisoned samples; verify spectral separation. Test against clean dataset for false positive rate. |
+| **Detector ID** | `model.integrity.mi03_activation_stats` |
+| **PS Requirement** | Activation statistics, representation collapse |
+| **Category** | `MODEL_INTEGRITY` |
+| **Method** | Instruments model execution across a calibrated deterministic probe battery (zeros, ones, spatial contrast gradient, seeded noise). Extracts bounded intermediate layer activations and output tensors. Computes layer activation moments (mean, std, min, max), dead representation ratios (% of zero activations across non-zero probes), and numerical instability (NaN/Inf in forward pass). |
+| **Required Access** | White-Box / Black-Box execution (executable ONNX or TorchScript model) |
+| **Evidence Produced** | Monitored layer activation statistics, dead activation ratios per probe, numerical overflow alerts (`EvidenceType.MEASUREMENT`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `numpy`, `onnxruntime`, `torch` (for TorchScript) |
+| **Risk Semantics** | HIGH if NaN/Inf activations detected during forward execution; MEDIUM if severe representation collapse detected (> 98% dead activations on all non-zero probes); NONE if activation dispersion is healthy. |
+| **Confidence Semantics** | HIGH when executed on calibrated deterministic probe suite. |
+| **Coverage Semantics** | Emits explicit `CoverageGap` (`internal_representation_and_activation_health_not_assessed`) when model is a raw PyTorch state dict without an executable computation graph. |
+| **Limitations** | Requires an executable computation graph (ONNX or TorchScript). Bounded to initial monitored layers to avoid memory exhaustion on deep networks. Dynamic conditional branches not activated by the probe battery are noted. |
+| **Test Strategy** | Programmatic tests for clean ONNX activation tracing, multi-layer intermediate node extraction, synthetic dead representation models, and explicit PyTorch state dict coverage gap emission. |
 
-### MI-06: Neural Cleanse (Simplified)
+### MI-04: Reference Model Comparison Battery
 
 | Attribute | Value |
 |-----------|-------|
-| **Detector ID** | `mi.neural_cleanse` |
-| **PS Requirement** | Backdoor/trigger search (Wang et al., 2019) |
-| **Category** | MODEL_INTEGRITY |
-| **Method** | For each output class, optimize a minimal perturbation (trigger pattern) that causes misclassification to that class. If one class requires an anomalously small perturbation, suspect a backdoor targeting that class. Anomaly Index = median(L1_norms) / min(L1_norms). |
-| **Required Access** | WHITE_BOX (requires gradient access) |
-| **Evidence Produced** | Per-class trigger L1 norms, anomaly index, reconstructed trigger pattern if found |
-| **Implementation Status** | PLANNED (Phase 3) — **EXPERIMENTAL** |
-| **Dependencies** | `torch`, `numpy` |
+| **Detector ID** | `model.integrity.mi04_reference_comparison` |
+| **PS Requirement** | Reference model comparison, reference battery |
+| **Category** | `MODEL_INTEGRITY` |
+| **Method** | Multi-layer comparative assurance between an analyzed model artifact and a supplied reference baseline model or stored profile. Compares: Layer 1 (cryptographic SHA-256 byte match), Layer 2 (graph topology, input/output schemas, parameter counts), Layer 3 (parameter statistical alignment and weight distance), Layer 4 (behavioral output divergence across deterministic probe battery: MSE, Max Absolute Difference, Cosine Similarity). |
+| **Required Access** | Candidate model paired with an authorized reference model file or stored reference profile |
+| **Evidence Produced** | Detailed comparison table with cryptographic hashes, schema diffs, behavioral MSE, MAD, and cosine similarity (`EvidenceType.COMPARISON`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `numpy`, `onnxruntime`, `torch` |
+| **Risk Semantics** | EXACT_MATCH / EQUIVALENT (MSE ≤ 1e-6) → NONE (Confidence HIGH); BEHAVIORAL_DIVERGENCE (MSE > 1e-6) → MEDIUM (Confidence HIGH); STRUCTURAL_MODIFICATION → MEDIUM (Confidence HIGH); MODEL_SUBSTITUTION / FORMAT_MISMATCH → HIGH (Confidence HIGH). |
+| **Confidence Semantics** | HIGH: direct comparative execution against ground-truth authorized reference artifact. |
+| **Coverage Semantics** | Emits `CoverageGap` (`reference_model_comparison_and_drift_not_assessed`) if no reference model artifact or reference profile is supplied. |
+| **Limitations** | Comparative assurance is only as reliable as the authenticity of the reference model. If reference is missing, reports an explicit gap rather than guessing. Differences indicate divergence, not automatic malice. |
+| **Test Strategy** | Programmatic tests for exact cryptographic match, structural difference, weight modification/behavioral divergence, format mismatch substitution, and stored profile comparison. |
+
+### MI-05: Model Trigger & Behavioral Perturbation Search
+
+| Attribute | Value |
+|-----------|-------|
+| **Detector ID** | `model.integrity.mi05_trigger_anomaly` |
+| **PS Requirement** | Trigger search / reconstruction, backdoor detection |
+| **Category** | `MODEL_INTEGRITY` |
+| **Method** | Evaluates whether candidate localized spatial transformations or trigger patterns cause abnormal, consistent output behavior or Trojan-like target output convergence. Generates 4 diverse clean baseline probe inputs (neutral gray, horizontal ramp, vertical ramp, noise) and applies a bounded candidate perturbation suite (top-left checkerboard, bottom-right checkerboard, center watermark, control uniform bias). Evaluates output shift and Target Mode Convergence Ratio: $CR = \text{Diversity}(\text{perturbed}) / \text{Diversity}(\text{clean})$. When $CR < 0.15$ and shift is elevated, detects invariant target mode collapse. |
+| **Required Access** | Black-Box / White-Box execution (executable ONNX or TorchScript model) |
+| **Evidence Produced** | Baseline clean pairwise diversity, per-perturbation output shift, perturbed pairwise diversity, and target convergence ratio metrics (`EvidenceType.MEASUREMENT`) |
+| **Implementation Status** | **IMPLEMENTED** |
+| **Dependencies** | Python stdlib, `numpy`, `onnxruntime`, `torch` |
+| **Risk Semantics** | HIGH if candidate perturbation induces abnormal target mode convergence ($CR < 0.15$ and elevated shift); NONE if model exhibits smooth, proportional perturbation response without target collapse. |
+| **Confidence Semantics** | HIGH for tested candidate spatial trigger suite. |
+| **Coverage Semantics** | Emits explicit `CoverageGap` (`trigger_sensitivity_and_backdoor_convergence_not_assessed`) when model is a non-executable format (PyTorch state dict). |
+| **Limitations** | Tests concrete localized candidate patch patterns. Does NOT guarantee detection of complex blended, invisible, or semantic triggers without access to original training distributions. Honest engineering boundary: absence of detected trigger sensitivity does not prove absence of all backdoors. |
+| **Test Strategy** | Programmatic tests for clean model smooth perturbation response, simulated trigger sensitivity with target mode convergence, determinism, and non-executable format coverage gaps. |
 | **Confidence Semantics** | Low-Moderate: research method, not production-validated at scale. |
 | **Limitations** | Computationally expensive. May fail against sophisticated attacks (composite triggers, clean-label). Assumes L_p norm trigger model. Original paper: Wang et al. (IEEE S&P 2019). PRAMAAN implements a simplified version, not the full optimization pipeline. |
 | **Test Strategy** | Train a backdoored model with known trigger; verify Neural Cleanse detects target class and approximate trigger. |

@@ -232,6 +232,28 @@ def create_assessment(
             max_size_mb=settings.max_model_size_mb,
         )
 
+    # 3. Resolve optional reference model
+    model_reference_path: Path | None = None
+    if body.model_reference_asset_id:
+        upload = upload_repo.get(body.model_reference_asset_id)
+        if not upload or upload.asset_type != "model":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "invalid_asset_id", "message": f"Reference model asset ID not found: {body.model_reference_asset_id!r}"},
+            )
+        resolved_ref = Path(upload.storage_path)
+        if not resolved_ref.exists():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "asset_missing", "message": "Uploaded reference model file is missing from storage."},
+            )
+        model_reference_path = resolved_ref
+    elif body.model_reference_path is not None:
+        model_reference_path = _validate_asset_path(
+            body.model_reference_path,
+            max_size_mb=settings.max_model_size_mb,
+        )
+
     # --- Build AssessmentRequest ---
     assess_id = body.assessment_id or str(uuid.uuid4())
     request = AssessmentRequest(
@@ -240,6 +262,7 @@ def create_assessment(
         dataset_path=dataset_path,
         dataset_format=dataset_format,
         model_path=model_path,
+        model_reference_path=model_reference_path,
         model_reference_fingerprint=body.model_reference_fingerprint,
         phash_threshold=body.phash_threshold,
         dhash_threshold=body.dhash_threshold,

@@ -98,9 +98,9 @@ function DetectorRow({
   const hasFindings = (run.findings_count ?? 0) > 0;
   
   const getIcon = (id: string) => {
-    if (id.includes('DI-01')) return Database;
-    if (id.includes('MI-01')) return Cpu;
-    if (id.includes('PI-01')) return GitBranch;
+    if (id.includes('DI-') || id.includes('data.integrity') || id.includes('di0')) return Database;
+    if (id.includes('MI-') || id.includes('model.integrity') || id.includes('mi0')) return Cpu;
+    if (id.includes('PI-') || id.includes('inference.provenance') || id.includes('pi0')) return GitBranch;
     return Layers;
   };
   const Icon = getIcon(run.detector_id);

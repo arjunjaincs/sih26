@@ -199,6 +199,39 @@ def ingest_image_directory(
     image_files = list(_iter_image_files(directory))
     log.info("Found %d candidate image files in %s", len(image_files), directory)
 
+    # Check for metadata.json, contributors.json, or labels.json in directory
+    contributors_map: dict[str, str] = {}
+    labels_map: dict[str, list[str]] = {}
+    for meta_file in (directory / "metadata.json", directory / "contributors.json", directory / "labels.json"):
+        if meta_file.is_file():
+            try:
+                with open(meta_file, "r", encoding="utf-8") as mf:
+                    mdata = json.load(mf)
+                    if isinstance(mdata, dict):
+                        if "contributors" in mdata and isinstance(mdata["contributors"], dict):
+                            contributors_map.update({str(k): str(v) for k, v in mdata["contributors"].items()})
+                        if "labels" in mdata and isinstance(mdata["labels"], dict):
+                            for k, v in mdata["labels"].items():
+                                if isinstance(v, list):
+                                    labels_map[str(k)] = [str(x) for x in v]
+                                else:
+                                    labels_map[str(k)] = [str(v)]
+                        elif "images" in mdata and isinstance(mdata["images"], list):
+                            for it in mdata["images"]:
+                                if isinstance(it, dict) and "file_name" in it:
+                                    if "contributor" in it:
+                                        contributors_map[str(it["file_name"])] = str(it["contributor"])
+                                    if "label" in it:
+                                        labels_map[str(it["file_name"])] = [str(it["label"])]
+                                    elif "labels" in it and isinstance(it["labels"], list):
+                                        labels_map[str(it["file_name"])] = [str(x) for x in it["labels"]]
+                        else:
+                            for k, v in mdata.items():
+                                if isinstance(v, (str, int)):
+                                    contributors_map[str(k)] = str(v)
+            except Exception:
+                pass
+
     for img_path in image_files:
         file_name = img_path.name
 
@@ -242,6 +275,18 @@ def ingest_image_directory(
             errors.append(err)
             continue
 
+        # Determine contributor if available
+        contributor: str | None = None
+        if file_name in contributors_map:
+            contributor = contributors_map[file_name]
+        else:
+            try:
+                rel_parent = img_path.relative_to(directory).parent
+                if rel_parent != Path(".") and str(rel_parent) != "":
+                    contributor = rel_parent.parts[0]
+            except ValueError:
+                pass
+
         sample = Sample(
             dataset_id=dataset_id,
             file_name=file_name,
@@ -251,7 +296,8 @@ def ingest_image_directory(
             width=meta.width,
             height=meta.height,
             file_size_bytes=meta.file_size_bytes,
-            labels=[],
+            labels=labels_map.get(file_name, []),
+            contributor=contributor,
         )
         samples_batch.append(sample)
 
@@ -294,6 +340,7 @@ class _CocoImage:
     file_name: str
     width: int | None
     height: int | None
+    contributor: str | None = None
 
 
 @dataclass
@@ -372,11 +419,18 @@ def _parse_coco_json(json_path: Path) -> tuple[
             raise CocoValidationError(f"images[{i}].file_name must be a non-empty string")
         if iid in images:
             raise CocoValidationError(f"Duplicate image id: {iid}")
+        contrib = img.get("contributor") or img.get("source") or img.get("user_id") or img.get("annotator")
+        if contrib is not None:
+            contrib = str(contrib).strip()
+        elif "info" in data and isinstance(data["info"], dict) and "contributor" in data["info"]:
+            contrib = str(data["info"]["contributor"]).strip()
+
         images[iid] = _CocoImage(
             id=iid,
             file_name=fname.strip(),
             width=img.get("width") if isinstance(img.get("width"), int) else None,
             height=img.get("height") if isinstance(img.get("height"), int) else None,
+            contributor=contrib,
         )
 
     # --- Parse annotations → build image_id → [label_name] map ------------
@@ -527,6 +581,7 @@ def ingest_coco_dataset(
             height=meta.height,
             file_size_bytes=meta.file_size_bytes,
             labels=labels,
+            contributor=coco_img.contributor,
         )
         samples_batch.append(sample)
 

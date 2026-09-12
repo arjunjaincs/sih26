@@ -132,11 +132,19 @@ class AssessmentCreateRequest(BaseModel):
         default=None,
         description="Asset identifier from POST /api/v1/uploads",
     )
+    model_reference_path: str | None = Field(
+        default=None,
+        description="Absolute path to reference model file (.onnx / .pt / .pth / .ts)",
+    )
+    model_reference_asset_id: str | None = Field(
+        default=None,
+        description="Uploaded asset identifier for reference model",
+    )
     model_reference_fingerprint: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Optional prior MI-01 fingerprint_recorded evidence dict "
-            "for comparison. When present, MI-01 will compare and detect changes."
+            "for comparison. When present, MI detectors will compare and detect changes."
         ),
     )
 

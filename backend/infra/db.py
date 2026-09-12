@@ -99,7 +99,8 @@ CREATE TABLE IF NOT EXISTS samples (
     width           INTEGER,
     height          INTEGER,
     file_size_bytes INTEGER NOT NULL DEFAULT 0,
-    labels_json     TEXT NOT NULL DEFAULT '[]'
+    labels_json     TEXT NOT NULL DEFAULT '[]',
+    contributor     TEXT
 );
 
 CREATE TABLE IF NOT EXISTS model_artifacts (
@@ -241,6 +242,9 @@ def open_db(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(samples)").fetchall()}
+    if "contributor" not in cols:
+        conn.execute("ALTER TABLE samples ADD COLUMN contributor TEXT")
     conn.commit()
     return conn
 
@@ -471,8 +475,8 @@ class SampleRepository:
             """
             INSERT INTO samples
                 (sample_id, dataset_id, file_name, sha256,
-                 phash, dhash, width, height, file_size_bytes, labels_json)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+                 phash, dhash, width, height, file_size_bytes, labels_json, contributor)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 s.sample_id,
@@ -485,6 +489,7 @@ class SampleRepository:
                 s.height,
                 s.file_size_bytes,
                 _j(s.labels),
+                s.contributor,
             ),
         )
         # Intentionally not committing per-sample — callers batch-commit
@@ -495,14 +500,14 @@ class SampleRepository:
             """
             INSERT INTO samples
                 (sample_id, dataset_id, file_name, sha256,
-                 phash, dhash, width, height, file_size_bytes, labels_json)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+                 phash, dhash, width, height, file_size_bytes, labels_json, contributor)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """,
             [
                 (
                     s.sample_id, s.dataset_id, s.file_name, s.sha256,
                     s.phash, s.dhash, s.width, s.height, s.file_size_bytes,
-                    _j(s.labels),
+                    _j(s.labels), s.contributor,
                 )
                 for s in samples
             ],
@@ -523,6 +528,7 @@ class SampleRepository:
 
     @staticmethod
     def _row_to_sample(row: sqlite3.Row) -> Sample:
+        contributor = row["contributor"] if "contributor" in row.keys() else None
         return Sample(
             sample_id=row["sample_id"],
             dataset_id=row["dataset_id"],
@@ -534,6 +540,7 @@ class SampleRepository:
             height=row["height"],
             file_size_bytes=row["file_size_bytes"],
             labels=json.loads(row["labels_json"]),
+            contributor=contributor,
         )
 
 
