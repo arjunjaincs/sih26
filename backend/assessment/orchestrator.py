@@ -367,6 +367,10 @@ class AssessmentService:
                     "evidence_count":         total_evidence,
                     "detectors_executed":     len(detectors_executed),
                     "coverage_gaps_count":    len(gaps),
+                    "risk_qualitative":       risk_qualitative,
+                    "confidence_qualifier":   confidence_qualifier,
+                    "executed_detector_ids":  detectors_executed,
+                    "skipped_detector_ids":   detectors_skipped,
                 },
                 assessment_id=assess_id,
             )

@@ -239,6 +239,8 @@ class AssessmentResultSchema(BaseModel):
     limitations: list[str]
     audit_chain_valid: bool | None
     error: str | None
+    software_version: str = "1.0.0"
+    created_at: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +263,9 @@ class AssessmentSummarySchema(BaseModel):
     error: str | None
     findings_count: int
     evidence_count: int
+    overall_risk: str | None = None
+    overall_confidence: str | None = None
+    coverage_fraction: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -346,3 +351,51 @@ class AuditResponse(BaseModel):
     failures: list[str]
     first_invalid_event_id: str | None
     events: list[AuditEventSchema]
+
+
+# ---------------------------------------------------------------------------
+# Provenance schemas
+# ---------------------------------------------------------------------------
+
+class ProvenanceManifestItem(BaseModel):
+    manifest_id: str
+    sequence: int
+    timestamp_utc: str
+    nonce: str
+    input_sha256: str
+    model_sha256: str
+    output_sha256: str
+    signature: str | None = None
+    status: str  # "VERIFIED" | "FAILED" | "NOT_PROVIDED"
+    replay_status: str  # "CLEAN" | "REPLAY_DETECTED" | "NOT_APPLICABLE"
+    binding_status: str  # "BOUND" | "MISMATCH" | "NOT_APPLICABLE"
+    public_key_hex: str | None = None
+    anomalies: list[str] = Field(default_factory=list)
+
+
+class ProvenanceResponse(BaseModel):
+    assessment_id: str
+    has_provenance: bool
+    manifest: ProvenanceManifestItem | None = None
+    anomalies: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Demo preset schemas
+# ---------------------------------------------------------------------------
+
+class DemoPresetSchema(BaseModel):
+    id: str
+    name: str
+    category: str
+    description: str
+    expected_risk: str
+    expected_confidence: str
+    detectors_targeted: list[str]
+    payload: dict[str, Any]
+
+
+class DemoListResponse(BaseModel):
+    total: int
+    demos: list[DemoPresetSchema]
+

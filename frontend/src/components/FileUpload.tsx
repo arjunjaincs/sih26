@@ -8,9 +8,14 @@ interface FileUploadProps {
   id?: string;
   accept?: string;
   assetType: 'model' | 'dataset';
+  label?: string;
+  description?: string;
   helpText?: string;
-  value: UploadResponse | null;
-  onChange: (upload: UploadResponse | null) => void;
+  value?: UploadResponse | null;
+  onChange?: (upload: UploadResponse | null) => void;
+  currentUpload?: UploadResponse | null;
+  onUploadSuccess?: (upload: UploadResponse | null) => void;
+  onClear?: () => void;
   disabled?: boolean;
 }
 
@@ -26,14 +31,26 @@ export function FileUpload({
   id: customId,
   accept,
   assetType,
+  label,
+  description,
   helpText,
   value,
   onChange,
+  currentUpload,
+  onUploadSuccess,
+  onClear,
   disabled = false,
 }: FileUploadProps) {
   const generatedId = useId();
   const inputId = customId || generatedId;
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const effectiveValue = value !== undefined ? value : (currentUpload ?? null);
+  const handleUpdate = (val: UploadResponse | null) => {
+    onChange?.(val);
+    onUploadSuccess?.(val);
+    if (val === null) onClear?.();
+  };
 
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -46,11 +63,11 @@ export function FileUpload({
 
     try {
       const result = await uploadAsset(file, assetType);
-      onChange(result);
+      handleUpdate(result);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.';
       setUploadError(msg);
-      onChange(null);
+      handleUpdate(null);
     } finally {
       setIsUploading(false);
       if (inputRef.current) {
@@ -106,6 +123,14 @@ export function FileUpload({
         aria-hidden="true"
       />
 
+      {/* Optional Label / Description header */}
+      {(label || description) && (
+        <div className="space-y-0.5 mb-1.5">
+          {label && <p className="text-xs font-semibold text-1">{label}</p>}
+          {description && <p className="text-[11px] text-3">{description}</p>}
+        </div>
+      )}
+
       {/* State 1: Uploading */}
       {isUploading && (
         <div className="flex items-center justify-between p-3.5 rounded-lg border border-accent/40 bg-surface-2/60">
@@ -120,7 +145,7 @@ export function FileUpload({
       )}
 
       {/* State 2: Uploaded successfully */}
-      {!isUploading && value && (
+      {!isUploading && effectiveValue && (
         <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] bg-surface-2/70 hover:border-[var(--border-strong)] transition-colors">
           <div className="flex items-center gap-3 min-w-0 pr-2">
             <div className="w-8 h-8 rounded bg-[var(--green-bg)] text-[var(--green)] flex items-center justify-center flex-shrink-0">
@@ -129,20 +154,20 @@ export function FileUpload({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-xs font-semibold text-1 truncate max-w-[240px] sm:max-w-md">
-                  {value.original_filename}
+                  {effectiveValue.original_filename}
                 </p>
                 <span className="text-[10px] font-mono text-3 flex-shrink-0">
-                  ({formatBytes(value.size_bytes)})
+                  ({formatBytes(effectiveValue.size_bytes)})
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-3">
                 <span className="flex items-center gap-1 text-[var(--green)]">
                   <CheckCircle2 className="w-2.5 h-2.5" />
-                  SHA-256: {value.sha256.slice(0, 12)}…
+                  SHA-256: {effectiveValue.sha256.slice(0, 12)}…
                 </span>
-                {value.format && (
+                {effectiveValue.format && (
                   <span className="px-1.5 py-0.2 rounded bg-surface border border-[var(--border)] uppercase">
-                    {value.format}
+                    {effectiveValue.format}
                   </span>
                 )}
               </div>
@@ -162,7 +187,7 @@ export function FileUpload({
             <button
               type="button"
               onClick={() => {
-                onChange(null);
+                handleUpdate(null);
                 setUploadError(null);
               }}
               className="p-1 rounded text-3 hover:text-[var(--red)] hover:bg-[var(--red-bg)] transition-colors"
@@ -176,7 +201,7 @@ export function FileUpload({
       )}
 
       {/* State 3: Empty / Dropzone */}
-      {!isUploading && !value && (
+      {!isUploading && !effectiveValue && (
         <div
           role="button"
           tabIndex={disabled ? -1 : 0}

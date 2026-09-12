@@ -233,6 +233,20 @@ vi.mock('./api/client', () => ({
     asset_type: 'model',
     created_at: '2026-09-12T15:46:00Z',
   })),
+  getDemos: vi.fn(() => Promise.resolve({ total: 0, demos: [] })),
+  getProvenance: vi.fn(() => Promise.resolve({
+    assessment_id: 'b3a8cba4-64e7-45dd-970f-668f2b164ed2',
+    verified: true,
+    ed25519_signature_valid: true,
+    replay_attack_detected: false,
+    manifest_asset_binding_valid: true,
+    manifests: [],
+    findings: [],
+    evidence: [],
+  })),
+  downloadReport: vi.fn(() => Promise.resolve(new Blob())),
+  getReportUrl: vi.fn((id: string) => `/api/v1/assessments/${id}/report`),
+  verifyAuditChain: vi.fn(() => Promise.resolve({ chain_valid: true, events_verified: 5 })),
   NetworkError: class NetworkError extends Error { name = 'NetworkError'; },
 }));
 

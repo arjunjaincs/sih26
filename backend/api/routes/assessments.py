@@ -25,8 +25,10 @@ AssessmentService.run_assessment() and returns the result.
 from __future__ import annotations
 
 import logging
+import sqlite3
 import uuid
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import JSONResponse
@@ -51,16 +53,21 @@ from backend.api.schemas import (
     EvidenceSchema,
     FindingSchema,
     FindingsResponse,
+    ProvenanceManifestItem,
+    ProvenanceResponse,
 )
 from backend.assessment.models import AssessmentRequest
 from backend.audit.verifier import ChainVerifier
-from backend.domain.enums import AssessmentState, DatasetFormat
+from backend.domain.enums import AssessmentState, DatasetFormat, Severity
 from backend.infra.db import (
     AssessmentRepository,
+    AssetRepository,
     AuditPayloadRepository,
     AuditRepository,
+    DetectorResultRepository,
     EvidenceRepository,
     FindingRepository,
+    ProvenanceRepository,
 )
 from backend.infra.ingestion import validate_absolute_path
 from backend.reporting import (
@@ -369,17 +376,45 @@ def list_assessments(
     """
     Return all assessments stored in the local SQLite database, most recent first.
 
-    Each item is an AssessmentSummarySchema with persisted findings/evidence counts.
+    Each item is an AssessmentSummarySchema with persisted findings/evidence counts
+    and summary assurance metrics (risk, confidence, coverage).
     Returns an empty list when no assessments have been run yet.
     """
     records = AssessmentRepository(conn).list_all()
     summaries: list[AssessmentSummarySchema] = []
+    finding_repo = FindingRepository(conn)
+    evidence_repo = EvidenceRepository(conn)
+    audit_repo = AuditRepository(conn)
+    payload_repo = AuditPayloadRepository(conn)
+
     for record in records:
-        findings = FindingRepository(conn).list_by_assessment(record.assessment_id)
+        findings = finding_repo.list_by_assessment(record.assessment_id)
         evidence_count = sum(
-            len(EvidenceRepository(conn).list_by_finding(f.finding_id))
+            len(evidence_repo.list_by_finding(f.finding_id))
             for f in findings
         )
+
+        events = audit_repo.list_by_assessment(record.assessment_id)
+        event_ids = [e.event_id for e in events]
+        payloads = payload_repo.get_all_for_events(event_ids)
+        c_payload: dict[str, Any] = {}
+        for ev in reversed(events):
+            if ev.event_type.value in ("assessment_complete", "assessment_failed"):
+                c_payload = payloads.get(ev.event_id, {})
+                break
+
+        raw_risk = c_payload.get("overall_risk")
+        if not raw_risk:
+            if any(f.severity in (Severity.CRITICAL, Severity.HIGH) for f in findings):
+                raw_risk = "high"
+            elif any(f.severity == Severity.MEDIUM for f in findings):
+                raw_risk = "medium"
+            else:
+                raw_risk = "none"
+
+        raw_conf = c_payload.get("overall_confidence", "HIGH")
+        raw_cov = c_payload.get("coverage_fraction", 1.0)
+
         summaries.append(AssessmentSummarySchema(
             assessment_id=record.assessment_id,
             title=record.title,
@@ -391,6 +426,9 @@ def list_assessments(
             error=record.error,
             findings_count=len(findings),
             evidence_count=evidence_count,
+            overall_risk=str(raw_risk).lower(),
+            overall_confidence=str(raw_conf).lower(),
+            coverage_fraction=float(raw_cov),
         ))
     return AssessmentListResponse(total=len(summaries), assessments=summaries)
 
@@ -401,41 +439,22 @@ def list_assessments(
 
 @router.get(
     "/assessments/{assessment_id}",
-    response_model=AssessmentSummarySchema,
-    summary="Retrieve a persisted assessment",
+    response_model=AssessmentResultSchema,
+    summary="Retrieve a persisted assessment result",
 )
 def get_assessment(
     assessment_id: str,
     conn: DbDep,
-) -> AssessmentSummarySchema:
+) -> AssessmentResultSchema:
     """
-    Retrieve summary of a previously run assessment from the database.
+    Retrieve canonical result of a previously run assessment from the database.
 
+    Returns the complete AssessmentResultSchema including overall risk,
+    confidence, coverage, 11-detector battery runs, coverage gaps, and limitations.
     Returns 404 if the assessment_id does not exist.
     """
-    record = AssessmentRepository(conn).get(assessment_id)
-    if record is None:
-        raise AssessmentNotFound(assessment_id)
+    return assemble_assessment_result_from_db(conn, assessment_id)
 
-    # Count findings and evidence for this assessment
-    findings = FindingRepository(conn).list_by_assessment(assessment_id)
-    evidence_count = sum(
-        len(EvidenceRepository(conn).list_by_finding(f.finding_id))
-        for f in findings
-    )
-
-    return AssessmentSummarySchema(
-        assessment_id=record.assessment_id,
-        title=record.title,
-        status=record.state.value,
-        software_version=record.software_version or "",
-        created_at=record.created_at.isoformat() if record.created_at else "",
-        started_at=record.started_at.isoformat() if record.started_at else None,
-        completed_at=record.completed_at.isoformat() if record.completed_at else None,
-        error=record.error,
-        findings_count=len(findings),
-        evidence_count=evidence_count,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -606,6 +625,91 @@ def get_audit(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/provenance
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/provenance",
+    response_model=ProvenanceResponse,
+    summary="Retrieve inference provenance assurance for an assessment",
+)
+def get_provenance(
+    assessment_id: str,
+    conn: DbDep,
+) -> ProvenanceResponse:
+    """
+    Retrieve persisted provenance manifest and PI-01 verification status.
+
+    Returns the cryptographic signature, replay check status, and asset binding status.
+    Returns 404 if the assessment does not exist.
+    """
+    if AssessmentRepository(conn).get(assessment_id) is None:
+        raise AssessmentNotFound(assessment_id)
+
+    prov_repo = ProvenanceRepository(conn)
+    manifests = prov_repo.list_by_assessment(assessment_id)
+    findings = FindingRepository(conn).list_by_assessment(assessment_id)
+
+    pi01_findings = [f for f in findings if f.detector_id == "inference.provenance.pi01_integrity"]
+    anomalies = [f.title for f in pi01_findings]
+
+    if not manifests and pi01_findings:
+        evidence_repo = EvidenceRepository(conn)
+        for f in pi01_findings:
+            for ev in evidence_repo.list_by_finding(f.finding_id):
+                if isinstance(ev.data, dict) and "manifest_id" in ev.data:
+                    m = prov_repo.get(ev.data["manifest_id"])
+                    if m:
+                        manifests.append(m)
+                        break
+            if manifests:
+                break
+
+    if not manifests:
+        return ProvenanceResponse(
+            assessment_id=assessment_id,
+            has_provenance=False,
+            manifest=None,
+            anomalies=anomalies,
+        )
+
+    pm = manifests[0]
+    sig_status = "VERIFIED"
+    replay_status = "CLEAN"
+    binding_status = "BOUND"
+
+    for f in pi01_findings:
+        if f.subcategory == "signature_invalid":
+            sig_status = "FAILED"
+        elif f.subcategory == "replay_detected":
+            replay_status = "REPLAY_DETECTED"
+        elif f.subcategory in ("input_mismatch", "model_mismatch", "output_mismatch"):
+            binding_status = "MISMATCH"
+
+    item = ProvenanceManifestItem(
+        manifest_id=pm.manifest_id,
+        sequence=pm.sequence,
+        timestamp_utc=pm.timestamp_utc.isoformat() if hasattr(pm.timestamp_utc, "isoformat") else str(pm.timestamp_utc),
+        nonce=pm.nonce,
+        input_sha256=pm.input_sha256,
+        model_sha256=pm.model_sha256,
+        output_sha256=pm.output_sha256,
+        signature=pm.signature,
+        status=sig_status,
+        replay_status=replay_status,
+        binding_status=binding_status,
+        anomalies=anomalies,
+    )
+    return ProvenanceResponse(
+        assessment_id=assessment_id,
+        has_provenance=True,
+        manifest=item,
+        anomalies=anomalies,
+    )
+
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/assessments/{assessment_id}/report
 # ---------------------------------------------------------------------------
 
@@ -713,3 +817,204 @@ def _result_to_schema(result) -> AssessmentResultSchema:
         audit_chain_valid=result.audit_chain_valid,
         error=result.error,
     )
+
+
+def assemble_assessment_result_from_db(
+    conn: sqlite3.Connection,
+    assessment_id: str,
+) -> AssessmentResultSchema:
+    """Assemble complete AssessmentResultSchema directly from persisted SQLite tables."""
+    from backend.reporting.extractor import BATTERY_DETECTORS, censor_paths
+
+    asmt_repo = AssessmentRepository(conn)
+    record = asmt_repo.get(assessment_id)
+    if record is None:
+        raise AssessmentNotFound(assessment_id)
+
+    finding_repo = FindingRepository(conn)
+    evidence_repo = EvidenceRepository(conn)
+    asset_repo = AssetRepository(conn)
+    det_repo = DetectorResultRepository(conn)
+    audit_repo = AuditRepository(conn)
+    payload_repo = AuditPayloadRepository(conn)
+
+    db_findings = finding_repo.list_by_assessment(assessment_id)
+    total_evidence = sum(
+        len(evidence_repo.list_by_finding(f.finding_id)) for f in db_findings
+    )
+    assets = asset_repo.list_by_assessment(assessment_id)
+    asset_ids = [a.asset_id for a in assets]
+
+    # Audit events & complete payload lookup
+    events = audit_repo.list_by_assessment(assessment_id)
+    event_ids = [e.event_id for e in events]
+    payloads = payload_repo.get_all_for_events(event_ids)
+
+    complete_payload: dict[str, Any] = {}
+    for ev in reversed(events):
+        if ev.event_type.value in ("assessment_complete", "assessment_failed"):
+            complete_payload = payloads.get(ev.event_id, {})
+            break
+
+    # Determine risk
+    raw_risk = complete_payload.get("overall_risk")
+    if not raw_risk:
+        if any(f.severity in (Severity.CRITICAL, Severity.HIGH) for f in db_findings):
+            raw_risk = "high"
+        elif any(f.severity == Severity.MEDIUM for f in db_findings):
+            raw_risk = "medium"
+        elif any(f.severity == Severity.LOW for f in db_findings):
+            raw_risk = "low"
+        else:
+            raw_risk = "none"
+    overall_risk = str(raw_risk).lower()
+
+    # Determine confidence & coverage
+    overall_confidence = str(complete_payload.get("overall_confidence", "HIGH")).lower()
+    coverage_fraction = float(complete_payload.get("coverage_fraction", 1.0))
+
+    # Detectors and Battery mapping
+    db_det_results = det_repo.list_by_assessment(assessment_id)
+    det_map = {r.detector_id: r for r in db_det_results}
+
+    detector_runs: list[DetectorRunSchema] = []
+    executed_detectors: list[str] = []
+    skipped_detectors: list[str] = []
+
+    stored_executed = complete_payload.get("executed_detector_ids")
+    stored_skipped = complete_payload.get("skipped_detector_ids")
+
+    for did, dname, _cat in BATTERY_DETECTORS:
+        if did in det_map:
+            r = det_map[did]
+            st_val = str(r.status.value if hasattr(r.status, "value") else r.status).lower()
+            ran = st_val in ("success", "partial")
+            if ran:
+                executed_detectors.append(did)
+            else:
+                skipped_detectors.append(did)
+
+            f_for_det = [f for f in db_findings if f.detector_id == did]
+            has_crit = any(f.severity == Severity.CRITICAL for f in f_for_det)
+            has_high = any(f.severity == Severity.HIGH for f in f_for_det)
+            has_med = any(f.severity == Severity.MEDIUM for f in f_for_det)
+            risk_lvl = "CRITICAL" if has_crit else ("HIGH" if has_high else ("MEDIUM" if has_med else "NONE"))
+
+            detector_runs.append(
+                DetectorRunSchema(
+                    detector_id=did,
+                    detector_name=dname,
+                    asset_id=r.asset_id,
+                    applicable=True,
+                    ran=ran,
+                    status=st_val.upper(),
+                    risk_level=risk_lvl,
+                    confidence_level="HIGH",
+                    findings_count=r.findings_count,
+                    evidence_count=r.evidence_count,
+                    error=r.error,
+                )
+            )
+        else:
+            detector_runs.append(
+                DetectorRunSchema(
+                    detector_id=did,
+                    detector_name=dname,
+                    asset_id=asset_ids[0] if asset_ids else "",
+                    applicable=False,
+                    ran=False,
+                    status="NOT_APPLICABLE",
+                    risk_level="NONE",
+                    confidence_level="HIGH",
+                    findings_count=0,
+                    evidence_count=0,
+                    error=None,
+                )
+            )
+
+    if stored_executed is not None:
+        executed_detectors = stored_executed
+    if stored_skipped is not None:
+        skipped_detectors = stored_skipped
+
+    # Coverage gaps
+    coverage_gaps: list[CoverageGapSchema] = []
+    limitations: list[str] = []
+    for f in db_findings:
+        if f.subcategory == "coverage_gap":
+            coverage_gaps.append(
+                CoverageGapSchema(
+                    detector_id=f.detector_id,
+                    detector_name=f.detection_method or f.detector_id,
+                    reason=f.title,
+                    required_capability="Complete artifact binding or runtime framework",
+                    observed_capability="Restricted or partial observation scope",
+                    impact="Full cryptographic or operational assurance cannot be asserted",
+                    recommended_action=f.recommended_disposition or "Provide complete artifact bindings",
+                )
+            )
+        if f.limitations:
+            for lim in f.limitations:
+                c_lim = censor_paths(lim)
+                if c_lim not in limitations:
+                    limitations.append(c_lim)
+
+    # Audit chain check
+    audit_chain_valid: bool | None = None
+    try:
+        verifier = ChainVerifier(audit_repo, payload_repo)
+        chain_res = verifier.verify_assessment(assessment_id)
+        audit_chain_valid = chain_res.valid
+    except Exception:
+        audit_chain_valid = None
+
+    # Qualitative descriptions
+    risk_qualitative = complete_payload.get("risk_qualitative")
+    if not risk_qualitative:
+        if db_findings and overall_risk == "none":
+            risk_qualitative = "Findings present but all assessed as informational/no risk by the executed detector(s)."
+        else:
+            risk_qualitative = {
+                "critical": "Critical safety defect detected; high probability of model failure, poison, or intentional compromise.",
+                "high": "High-severity defect or anomaly identified in assessed artifacts.",
+                "medium": "Moderate anomaly detected; requires analyst review prior to deployment.",
+                "low": "Minor observations noted; within normal operational bounds.",
+                "none": "No anomalous safety drift detected across inspected artifacts.",
+            }.get(overall_risk, "No anomalous safety drift detected.")
+
+    confidence_qualifier = complete_payload.get("confidence_qualifier")
+    if not confidence_qualifier:
+        if len(executed_detectors) > 0 and len(coverage_gaps) == 0:
+            confidence_qualifier = f"All {len(executed_detectors)} applicable detector(s) completed successfully with full coverage."
+        else:
+            confidence_qualifier = {
+                "high": "Evaluated through deterministic execution battery and exact byte fingerprints.",
+                "moderate": "Partial observation window or missing reference artifacts reduced confidence.",
+                "low": "Assessment executed with significant methodological constraints.",
+            }.get(overall_confidence, "Deterministic execution battery.")
+
+    return AssessmentResultSchema(
+        assessment_id=record.assessment_id,
+        title=record.title,
+        status=record.state.value,
+        started_at=record.started_at.isoformat() if record.started_at else (record.created_at.isoformat() if record.created_at else ""),
+        completed_at=record.completed_at.isoformat() if record.completed_at else (record.created_at.isoformat() if record.created_at else ""),
+        assets_analyzed=asset_ids,
+        detectors_executed=executed_detectors,
+        detectors_skipped=skipped_detectors,
+        findings_count=len(db_findings),
+        evidence_count=total_evidence,
+        overall_risk=overall_risk,
+        risk_qualitative=risk_qualitative,
+        overall_confidence=overall_confidence,
+        confidence_qualifier=confidence_qualifier,
+        coverage_fraction=coverage_fraction,
+        coverage_gaps=coverage_gaps,
+        detector_runs=detector_runs,
+        limitations=limitations,
+        audit_chain_valid=audit_chain_valid,
+        error=record.error,
+        software_version=record.software_version or "1.0.0",
+        created_at=record.created_at.isoformat() if record.created_at else None,
+    )
+

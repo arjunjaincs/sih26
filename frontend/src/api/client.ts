@@ -10,9 +10,11 @@ import type {
   AssessmentResultSchema,
   AssessmentSummarySchema,
   CapabilitiesResponse,
+  DemoListResponse,
   EvidenceResponse,
   FindingsResponse,
   HealthResponse,
+  ProvenanceResponse,
   UploadResponse,
 } from '../types/api';
 
@@ -103,8 +105,8 @@ export function createAssessment(req: AssessmentCreateRequest): Promise<Assessme
   });
 }
 
-export function getAssessment(id: string): Promise<AssessmentSummarySchema> {
-  return apiFetch<AssessmentSummarySchema>(`/api/v1/assessments/${encodeURIComponent(id)}`);
+export function getAssessment(id: string): Promise<AssessmentResultSchema> {
+  return apiFetch<AssessmentResultSchema>(`/api/v1/assessments/${encodeURIComponent(id)}`);
 }
 
 export function listAssessments(): Promise<AssessmentListResponse> {
@@ -121,6 +123,43 @@ export function getEvidence(id: string): Promise<EvidenceResponse> {
 
 export function getAudit(id: string): Promise<AuditResponse> {
   return apiFetch<AuditResponse>(`/api/v1/assessments/${encodeURIComponent(id)}/audit`);
+}
+
+export function getProvenance(id: string): Promise<ProvenanceResponse> {
+  return apiFetch<ProvenanceResponse>(`/api/v1/assessments/${encodeURIComponent(id)}/provenance`);
+}
+
+export function getDemos(): Promise<DemoListResponse> {
+  return apiFetch<DemoListResponse>('/api/v1/demos');
+}
+
+export function getReportUrl(id: string): string {
+  return `${BASE_URL}/api/v1/assessments/${encodeURIComponent(id)}/report`;
+}
+
+export async function downloadReport(id: string, filename?: string): Promise<void> {
+  const url = getReportUrl(id);
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET' });
+  } catch (err) {
+    throw new NetworkError(err);
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, 'report_download_failed', 'Failed to generate or download assurance report.');
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  const safeShortId = id.slice(0, 8);
+  a.download = filename || `pramaan_assurance_report_${safeShortId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 export async function uploadAsset(

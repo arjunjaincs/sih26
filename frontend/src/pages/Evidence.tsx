@@ -1,5 +1,6 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import type { AssessmentWorkspaceContext } from '../layouts/AssessmentWorkspaceLayout';
 import { 
   Copy, 
   Check, 
@@ -208,6 +209,7 @@ function EvidenceCard({ ev }: { ev: EvidenceSchema }) {
 ──────────────────────────────────────────────────────────── */
 export function Evidence() {
   const { id } = useParams<{ id?: string }>();
+  const outletCtx = useOutletContext<AssessmentWorkspaceContext | undefined>();
   const [data, setData] = useState<EvidenceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,7 +223,7 @@ export function Evidence() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-4 animate-pulse">
+      <div className={outletCtx ? "space-y-4 animate-pulse" : "max-w-5xl mx-auto px-6 py-8 space-y-4 animate-pulse"}>
         <div className="h-10 bg-surface-2 rounded w-1/3" />
         {[...Array(3)].map((_, i) => (
           <div key={i} className="h-28 bg-surface-2 rounded-xl" />
@@ -232,7 +234,7 @@ export function Evidence() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className={outletCtx ? "" : "max-w-5xl mx-auto px-6 py-8"}>
         <ErrorState title="Could not load assessment evidence" message={error} />
       </div>
     );
@@ -241,9 +243,9 @@ export function Evidence() {
   const items = data?.evidence ?? [];
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-      {/* Unified Sub-navigation */}
-      {id && (
+    <div className={outletCtx ? "space-y-6" : "max-w-5xl mx-auto px-6 py-8 space-y-6"}>
+      {/* Sub-navigation only if accessed outside master workspace */}
+      {!outletCtx && id && (
         <AssessmentSubNav 
           assessmentId={id} 
           evidenceCount={items.length} 

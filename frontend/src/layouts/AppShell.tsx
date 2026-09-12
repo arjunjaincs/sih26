@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Moon, Sun, Globe } from 'lucide-react';
+import { Moon, Sun, ShieldCheck } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { getHealth, NetworkError } from '../api/client';
 import { cn } from '../lib/cn';
@@ -97,14 +97,14 @@ export function AppShell() {
               </span>
             </div>
 
-            {/* Lang */}
-            <button
-              className="flex items-center gap-1 text-xs text-3 hover:text-1 transition-colors"
-              title="Language (additional languages coming soon)"
+            {/* Air-Gapped Mode Badge */}
+            <div
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-surface-2 border border-[var(--border)] text-2 select-none"
+              title="Air-Gapped: Fully offline operation with zero outbound network calls"
             >
-              <Globe className="w-3.5 h-3.5" />
-              <span>EN</span>
-            </button>
+              <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline">Air-Gapped</span>
+            </div>
 
             {/* Theme toggle */}
             <button

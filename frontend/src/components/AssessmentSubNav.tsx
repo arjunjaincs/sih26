@@ -1,5 +1,12 @@
-import { NavLink, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertTriangle, ShieldCheck, FileText } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { 
+  FileText, 
+  AlertTriangle, 
+  FileSearch, 
+  ShieldCheck, 
+  KeyRound, 
+  SlidersHorizontal 
+} from 'lucide-react';
 import { cn } from '../lib/cn';
 
 interface AssessmentSubNavProps {
@@ -7,6 +14,8 @@ interface AssessmentSubNavProps {
   findingsCount?: number;
   evidenceCount?: number;
   chainValid?: boolean | null;
+  provenanceValid?: boolean | null;
+  coverageGapsCount?: number;
 }
 
 export function AssessmentSubNav({
@@ -14,11 +23,13 @@ export function AssessmentSubNav({
   findingsCount,
   evidenceCount,
   chainValid,
+  provenanceValid,
+  coverageGapsCount,
 }: AssessmentSubNavProps) {
   const tabs = [
     {
       to: `/assessments/${assessmentId}/result`,
-      label: 'Results',
+      label: 'Results Overview',
       icon: FileText,
       badge: null,
     },
@@ -27,33 +38,52 @@ export function AssessmentSubNav({
       label: 'Findings',
       icon: AlertTriangle,
       badge: findingsCount !== undefined ? findingsCount : null,
+      badgeType: findingsCount && findingsCount > 0 ? 'warning' : 'neutral',
     },
     {
       to: `/assessments/${assessmentId}/evidence`,
       label: 'Evidence',
-      icon: CheckCircle,
+      icon: FileSearch,
       badge: evidenceCount !== undefined ? evidenceCount : null,
+      badgeType: 'neutral',
+    },
+    {
+      to: `/assessments/${assessmentId}/provenance`,
+      label: 'Provenance',
+      icon: KeyRound,
+      badge:
+        provenanceValid === true
+          ? 'Verified'
+          : provenanceValid === false
+          ? 'Failed'
+          : null,
+      badgeType: provenanceValid === true ? 'success' : 'danger',
     },
     {
       to: `/assessments/${assessmentId}/audit`,
       label: 'Audit Trail',
       icon: ShieldCheck,
-      badge: chainValid === true ? 'Valid' : chainValid === false ? 'Invalid' : null,
+      badge:
+        chainValid === true
+          ? 'Valid'
+          : chainValid === false
+          ? 'Tampered'
+          : null,
+      badgeType: chainValid === true ? 'success' : 'danger',
+    },
+    {
+      to: `/assessments/${assessmentId}/limitations`,
+      label: 'Limitations',
+      icon: SlidersHorizontal,
+      badge: coverageGapsCount !== undefined && coverageGapsCount > 0 ? coverageGapsCount : null,
+      badgeType: 'warning',
     },
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border)] pb-3 mb-6">
-      <Link
-        to="/assessments"
-        className="inline-flex items-center gap-1.5 text-xs text-3 hover:text-1 transition-colors w-fit focus-visible:ring-1"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        <span>Back to Assessments</span>
-      </Link>
-
-      <nav className="flex items-center gap-1.5 overflow-x-auto" aria-label="Assessment views">
-        {tabs.map(tab => {
+    <div className="border-b border-[var(--border)] mb-6 overflow-x-auto">
+      <nav className="flex items-center gap-1.5 min-w-max pb-3" aria-label="Assessment views">
+        {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <NavLink
@@ -68,19 +98,19 @@ export function AssessmentSubNav({
                 )
               }
             >
-              <Icon className="w-3.5 h-3.5 text-accent" />
+              <Icon className="w-3.5 h-3.5 text-accent flex-shrink-0" />
               <span>{tab.label}</span>
               {tab.badge !== null && (
                 <span
                   className={cn(
                     'px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold',
-                    typeof tab.badge === 'string'
-                      ? tab.badge === 'Valid'
-                        ? 'bg-[var(--green-bg)] text-[var(--green)]'
-                        : 'bg-[var(--red-bg)] text-[var(--red)]'
-                      : tab.badge > 0
-                        ? 'bg-[var(--accent-bg)] text-accent'
-                        : 'bg-surface-2 text-3'
+                    tab.badgeType === 'success'
+                      ? 'bg-[var(--green-bg)] text-[var(--green)] border border-[var(--green)]/30'
+                      : tab.badgeType === 'danger'
+                      ? 'bg-[var(--red-bg)] text-[var(--red)] border border-[var(--red)]/30'
+                      : tab.badgeType === 'warning'
+                      ? 'bg-[var(--amber-bg)] text-[var(--amber)] border border-[var(--amber-border)]'
+                      : 'bg-surface-2 text-3 border border-[var(--border)]'
                   )}
                 >
                   {tab.badge}

@@ -1,5 +1,6 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useOutletContext } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import type { AssessmentWorkspaceContext } from '../layouts/AssessmentWorkspaceLayout';
 import { 
   ShieldCheck, 
   ShieldAlert, 
@@ -127,6 +128,8 @@ export function AuditTrail() {
   const [verifying, setVerifying] = useState(false);
   const [verifiedNotice, setVerifiedNotice] = useState(false);
 
+  const outletCtx = useOutletContext<AssessmentWorkspaceContext | undefined>();
+
   function load() {
     if (!id) { setLoading(false); return; }
     setLoading(true);
@@ -147,6 +150,9 @@ export function AuditTrail() {
         setVerifying(false);
         setVerifiedNotice(true);
         setTimeout(() => setVerifiedNotice(false), 3500);
+        if (outletCtx?.reloadAssessment) {
+          outletCtx.reloadAssessment();
+        }
       })
       .catch(err => {
         setError(err.message);
@@ -156,7 +162,7 @@ export function AuditTrail() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-4 animate-pulse">
+      <div className={outletCtx ? "space-y-4 animate-pulse" : "max-w-5xl mx-auto px-6 py-8 space-y-4 animate-pulse"}>
         <div className="h-10 bg-surface-2 rounded w-1/3" />
         {[...Array(4)].map((_, i) => (
           <div key={i} className="h-20 bg-surface-2 rounded-xl" />
@@ -167,7 +173,7 @@ export function AuditTrail() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className={outletCtx ? "" : "max-w-5xl mx-auto px-6 py-8"}>
         <ErrorState title="Could not load audit trail" message={error} />
       </div>
     );
@@ -177,9 +183,9 @@ export function AuditTrail() {
   const chainValid = data?.chain_valid;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-      {/* Unified Sub-navigation */}
-      {id && (
+    <div className={outletCtx ? "space-y-6" : "max-w-5xl mx-auto px-6 py-8 space-y-6"}>
+      {/* Sub-navigation only if accessed outside master workspace */}
+      {!outletCtx && id && (
         <AssessmentSubNav 
           assessmentId={id} 
           chainValid={chainValid} 

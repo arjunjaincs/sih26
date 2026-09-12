@@ -70,7 +70,14 @@ export interface AssessmentCreateRequest {
   dataset_format?: string | null; // 'image_dir' | 'coco_json'
   model_path?: string | null;
   model_asset_id?: string | null;
+  model_reference_path?: string | null;
+  model_reference_asset_id?: string | null;
   model_reference_fingerprint?: Record<string, unknown> | null;
+  provenance_manifest?: Record<string, unknown> | null;
+  provenance_public_key_hex?: string | null;
+  actual_input_bytes_hex?: string | null;
+  actual_output_bytes_hex?: string | null;
+  actual_model_sha256?: string | null;
   phash_threshold?: number; // 0–64, default 10
   dhash_threshold?: number; // 0–64, default 10
   min_cluster_size?: number; // ≥2, default 2
@@ -109,7 +116,7 @@ export interface DetectorRunSchema {
 }
 
 // ---------------------------------------------------------------------------
-// Assessment result (returned by POST /api/v1/assessments)
+// Assessment result (returned by POST and GET /api/v1/assessments/{id})
 // ---------------------------------------------------------------------------
 
 export interface AssessmentResultSchema {
@@ -133,10 +140,12 @@ export interface AssessmentResultSchema {
   limitations: string[];
   audit_chain_valid: boolean | null;
   error: string | null;
+  software_version?: string;
+  created_at?: string | null;
 }
 
 // ---------------------------------------------------------------------------
-// Assessment summary (returned by GET /api/v1/assessments/{id})
+// Assessment summary (returned in GET /api/v1/assessments list)
 // ---------------------------------------------------------------------------
 
 export interface AssessmentSummarySchema {
@@ -150,12 +159,63 @@ export interface AssessmentSummarySchema {
   error: string | null;
   findings_count: number;
   evidence_count: number;
+  overall_risk?: string | null;
+  overall_confidence?: string | null;
+  coverage_fraction?: number | null;
 }
 
 export interface AssessmentListResponse {
   total: number;
   assessments: AssessmentSummarySchema[];
 }
+
+// ---------------------------------------------------------------------------
+// Provenance schemas
+// ---------------------------------------------------------------------------
+
+export interface ProvenanceManifestItem {
+  manifest_id: string;
+  sequence: number;
+  timestamp_utc: string;
+  nonce: string;
+  input_sha256: string;
+  model_sha256: string;
+  output_sha256: string;
+  signature?: string | null;
+  status: 'VERIFIED' | 'FAILED' | 'NOT_PROVIDED' | string;
+  replay_status: 'CLEAN' | 'REPLAY_DETECTED' | 'NOT_APPLICABLE' | string;
+  binding_status: 'BOUND' | 'MISMATCH' | 'NOT_APPLICABLE' | string;
+  public_key_hex?: string | null;
+  anomalies: string[];
+}
+
+export interface ProvenanceResponse {
+  assessment_id: string;
+  has_provenance: boolean;
+  manifest: ProvenanceManifestItem | null;
+  anomalies: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Demo preset schemas
+// ---------------------------------------------------------------------------
+
+export interface DemoPresetSchema {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  expected_risk: string;
+  expected_confidence: string;
+  detectors_targeted: string[];
+  payload: AssessmentCreateRequest;
+}
+
+export interface DemoListResponse {
+  total: number;
+  demos: DemoPresetSchema[];
+}
+
 
 // ---------------------------------------------------------------------------
 // Findings
