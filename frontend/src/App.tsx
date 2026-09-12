@@ -19,6 +19,7 @@ export function App() {
             <Route index element={<Overview />} />
             <Route path="new" element={<NewAssessment />} />
             <Route path="assessments" element={<Assessments />} />
+            <Route path="assessments/new" element={<NewAssessment />} />
             <Route path="assessments/:id/result" element={<AssessmentResult />} />
             <Route path="assessments/:id/findings" element={<Findings />} />
             <Route path="assessments/:id/evidence" element={<Evidence />} />

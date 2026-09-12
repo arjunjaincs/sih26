@@ -1,6 +1,6 @@
 import { cn } from '../lib/cn';
 
-type Variant = 'risk' | 'confidence' | 'severity' | 'status' | 'category' | 'neutral';
+type Variant = 'risk' | 'confidence' | 'severity' | 'status' | 'category' | 'availability' | 'neutral';
 
 interface StatusBadgeProps {
   value: string;
@@ -23,11 +23,19 @@ const CONFIDENCE: Record<string, string> = {
 };
 
 const STATUS: Record<string, string> = {
-  complete:  'bg-[var(--risk-none-bg)] text-[var(--status-complete)]',
-  failed:    'bg-[var(--risk-critical-bg)] text-[var(--status-failed)]',
-  analyzing: 'bg-[var(--accent-bg)] text-accent',
-  ingesting: 'bg-[var(--accent-bg)] text-accent',
-  created:   'bg-surface-2 text-3',
+  complete:  'bg-[var(--risk-none-bg)] text-[var(--status-complete)] ring-1 ring-[var(--status-complete)]/30',
+  failed:    'bg-[var(--risk-critical-bg)] text-[var(--status-failed)] ring-1 ring-[var(--status-failed)]/30',
+  analyzing: 'bg-[var(--accent-bg)] text-accent ring-1 ring-accent/30',
+  ingesting: 'bg-[var(--accent-bg)] text-accent ring-1 ring-accent/30',
+  created:   'bg-surface-2 text-3 ring-1 ring-[var(--border)]',
+};
+
+const AVAILABILITY: Record<string, string> = {
+  implemented:    'bg-[var(--risk-none-bg)] text-[var(--risk-none)] ring-1 ring-[var(--risk-none)]/30',
+  available:      'bg-[var(--risk-none-bg)] text-[var(--risk-none)] ring-1 ring-[var(--risk-none)]/30',
+  limited:        'bg-[var(--risk-medium-bg)] text-[var(--risk-medium)] ring-1 ring-[var(--risk-medium)]/30',
+  unavailable:    'bg-surface-2 text-3 ring-1 ring-[var(--border)]',
+  not_applicable: 'bg-surface-2 text-3 ring-1 ring-[var(--border)]',
 };
 
 const CATEGORY: Record<string, string> = {
@@ -45,7 +53,8 @@ const LABELS: Record<string, string> = {
   moderate: 'Moderate', high: 'High', critical: 'Critical',
   complete: 'Complete', failed: 'Failed', analyzing: 'Analyzing',
   ingesting: 'Ingesting', created: 'Created', info: 'Info',
-  not_applicable: 'N/A',
+  implemented: 'Implemented', limited: 'Limited', unavailable: 'Unavailable',
+  available: 'Available', not_applicable: 'Not Applicable',
 };
 
 export function StatusBadge({ value, variant = 'neutral', className }: StatusBadgeProps) {
@@ -58,6 +67,7 @@ export function StatusBadge({ value, variant = 'neutral', className }: StatusBad
   else if (variant === 'severity' && RISK[key]) cls = RISK[key];
   else if (variant === 'status' && STATUS[key]) cls = STATUS[key];
   else if (variant === 'category' && CATEGORY[key]) cls = CATEGORY[key];
+  else if (variant === 'availability' && AVAILABILITY[key]) cls = AVAILABILITY[key];
 
   return (
     <span className={cn(
