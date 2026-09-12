@@ -363,6 +363,171 @@ class TestSigning:
             "Private key bytes must NEVER be stored in audit records"
         )
 
+    # -----------------------------------------------------------------------
+    # SEC-01 Regression Tests: Cryptographic Event-Signature Binding
+    # -----------------------------------------------------------------------
+
+    def test_sec01_legitimate_signed_event_verifies(self, db, signing_keypair):
+        """TEST A: A legitimately signed event verifies successfully."""
+        priv, pub = signing_keypair
+        svc = AuditService(AuditRepository(db), AuditPayloadRepository(db))
+        ev = svc.emit_event(
+            AuditEventType.DETECTOR_COMPLETE,
+            payload={"detector_id": "di01_duplicates", "findings_count": 0},
+            assessment_id="assess-legit-1",
+            actor="analyst-alice",
+            private_key=priv,
+        )
+        stored_payload = AuditPayloadRepository(db).get(ev.event_id)
+        assert svc.verify_event_signature(ev, stored_payload, pub) is True
+
+    @pytest.mark.parametrize("field_to_tamper,tampered_val", [
+        ("actor", "attacker"),
+        ("event_type", AuditEventType.ASSESSMENT_FAILED),
+        ("timestamp_utc", "2020-01-01T00:00:00Z"),
+        ("assessment_id", "assess-forged-999"),
+        ("previous_hash", "1" * 64),
+        ("event_id", "00000000-0000-0000-0000-000000000000"),
+    ])
+    def test_sec01_modified_event_field_fails_verification(self, db, signing_keypair, field_to_tamper, tampered_val):
+        """
+        TEST B: Modify a signed event's meaningful field while retaining
+        the original __pre_sig_hash and __signature. Verification MUST return False.
+        """
+        priv, pub = signing_keypair
+        svc = AuditService(AuditRepository(db), AuditPayloadRepository(db))
+        ev = svc.emit_event(
+            AuditEventType.DETECTOR_COMPLETE,
+            payload={"status": "success", "score": 0.99},
+            assessment_id="assess-orig",
+            actor="system",
+            private_key=priv,
+        )
+        stored_payload = AuditPayloadRepository(db).get(ev.event_id)
+
+        # Tamper event field while payload retains original pre_sig_hash and signature
+        tampered_ev = ev.model_copy(update={field_to_tamper: tampered_val})
+        assert svc.verify_event_signature(tampered_ev, stored_payload, pub) is False
+
+    def test_sec01_modified_payload_fails_verification(self, db, signing_keypair):
+        """
+        TEST C: Modify the payload while retaining the original
+        __pre_sig_hash and __signature. Verification MUST return False.
+        """
+        priv, pub = signing_keypair
+        svc = AuditService(AuditRepository(db), AuditPayloadRepository(db))
+        ev = svc.emit_event(
+            AuditEventType.DETECTOR_COMPLETE,
+            payload={"findings": 0, "status": "clean"},
+            private_key=priv,
+        )
+        stored_payload = AuditPayloadRepository(db).get(ev.event_id)
+
+        # Tamper payload content (e.g. inject hidden findings or flip status)
+        tampered_payload = dict(stored_payload)
+        tampered_payload["status"] = "compromised"
+        assert svc.verify_event_signature(ev, tampered_payload, pub) is False
+
+        # Add a new field
+        tampered_payload_2 = dict(stored_payload)
+        tampered_payload_2["injected_field"] = "malicious"
+        assert svc.verify_event_signature(ev, tampered_payload_2, pub) is False
+
+    def test_sec01_tampered_pre_sig_hash_fails_verification(self, db, signing_keypair):
+        """
+        TEST D: Modify __pre_sig_hash without a matching valid signature.
+        Verification MUST return False.
+        """
+        priv, pub = signing_keypair
+        svc = AuditService(AuditRepository(db), AuditPayloadRepository(db))
+        ev = svc.emit_event(
+            AuditEventType.DETECTOR_COMPLETE,
+            payload={"status": "success"},
+            private_key=priv,
+        )
+        stored_payload = AuditPayloadRepository(db).get(ev.event_id)
+
+        tampered_payload = dict(stored_payload)
+        tampered_payload["__pre_sig_hash"] = "e" * 64
+        assert svc.verify_event_signature(ev, tampered_payload, pub) is False
+
+    def test_sec01_tampered_signature_fails_verification(self, db, signing_keypair):
+        """
+        TEST E: Modify __signature. Verification MUST return False.
+        """
+        priv, pub = signing_keypair
+        svc = AuditService(AuditRepository(db), AuditPayloadRepository(db))
+        ev = svc.emit_event(
+            AuditEventType.DETECTOR_COMPLETE,
+            payload={"status": "success"},
+            private_key=priv,
+        )
+        stored_payload = AuditPayloadRepository(db).get(ev.event_id)
+
+        tampered_payload = dict(stored_payload)
+        tampered_payload["__signature"] = "0" * 128
+        assert svc.verify_event_signature(ev, tampered_payload, pub) is False
+
+    def test_sec01_signature_transplant_attack_rejected(self, db, signing_keypair):
+        """
+        TEST G (Requirement 8): Exact vulnerability verification.
+        A valid signature and __pre_sig_hash copied from one legitimate event
+        MUST NOT validate against a different event/payload.
+        """
+        priv, pub = signing_keypair
+        svc = AuditService(AuditRepository(db), AuditPayloadRepository(db))
+
+        # Event 1: Legitimate signed event
+        ev1 = svc.emit_event(
+            AuditEventType.ASSESSMENT_CREATED,
+            payload={"title": "Approved Assessment", "clearance": "high"},
+            assessment_id="assess-1",
+            actor="chief-auditor",
+            private_key=priv,
+        )
+        payload1 = AuditPayloadRepository(db).get(ev1.event_id)
+        assert svc.verify_event_signature(ev1, payload1, pub) is True
+
+        # Event 2: Fabricated or different unsigned event
+        ev2 = svc.emit_event(
+            AuditEventType.ASSESSMENT_CREATED,
+            payload={"title": "Unapproved Rogue Assessment", "clearance": "none"},
+            assessment_id="assess-2",
+            actor="rogue-user",
+            # No private_key
+        )
+        payload2 = AuditPayloadRepository(db).get(ev2.event_id)
+        assert "__signature" not in payload2
+
+        # Attacker transplants signature and pre_sig_hash from ev1 into payload2
+        transplanted_payload = dict(payload2)
+        transplanted_payload["__signature"] = payload1["__signature"]
+        transplanted_payload["__pre_sig_hash"] = payload1["__pre_sig_hash"]
+        transplanted_payload["__signing_key_id"] = payload1["__signing_key_id"]
+
+        # Standalone verification MUST reject this detachment attack
+        assert svc.verify_event_signature(ev2, transplanted_payload, pub) is False
+
+    def test_sec01_chain_verifier_passes_for_signed_events(self, db, signing_keypair):
+        """
+        TEST F: Ensure existing ChainVerifier behavior still passes for legitimate events.
+        """
+        from backend.audit.verifier import ChainVerifier
+        priv, pub = signing_keypair
+        audit_repo = AuditRepository(db)
+        payload_repo = AuditPayloadRepository(db)
+        svc = AuditService(audit_repo, payload_repo)
+
+        svc.emit_event(AuditEventType.ASSESSMENT_CREATED, {"title": "run1"}, private_key=priv)
+        svc.emit_event(AuditEventType.DETECTOR_COMPLETE, {"detector": "di01", "result": "ok"}, private_key=priv)
+        svc.emit_event(AuditEventType.PROVENANCE_VERIFIED, {"verified": True})  # mixed signed/unsigned
+
+        verifier = ChainVerifier(audit_repo, payload_repo)
+        res = verifier.verify_all()
+        assert res.valid is True
+        assert res.events_checked == 3
+        assert len(res.failures) == 0
+
 
 # ---------------------------------------------------------------------------
 # Tests: Convenience methods

@@ -167,6 +167,7 @@ class AuditService:
             # Phase 4: recompute everything with the signed payload
             payload_digest = compute_payload_digest(effective_payload)
             event = AuditEvent(
+                event_id=tmp_event.event_id,
                 event_type=event_type,
                 timestamp_utc=timestamp,
                 assessment_id=assessment_id,
@@ -213,17 +214,53 @@ class AuditService:
 
         The signature covers the pre-signature current_hash stored in
         payload["__pre_sig_hash"].  This is the current_hash that was
-        computed from the unsigned payload before the signature was added.
+        computed from the unsigned payload and unsigned event fields
+        before the signature was added.
 
-        Returns True iff the signature is present, __pre_sig_hash is present,
-        and the signature verifies correctly.
+        Returns True iff:
+          1. The signature and __pre_sig_hash are present in payload
+          2. The expected pre-signature hash recomputed from *event* and
+             the unsigned payload matches payload["__pre_sig_hash"]
+          3. The Ed25519 signature over that hash verifies with *public_key*
         """
         from backend.infra.crypto import verify as crypto_verify
         sig_hex = payload.get("__signature")
         pre_sig_hash = payload.get("__pre_sig_hash")
         if not sig_hex or not pre_sig_hash:
             return False
-        return crypto_verify(public_key, pre_sig_hash, sig_hex)
+        if not isinstance(sig_hex, str) or not isinstance(pre_sig_hash, str):
+            return False
+
+        try:
+            # Reconstruct unsigned payload by stripping signing metadata
+            unsigned_payload = {
+                k: v for k, v in payload.items()
+                if not k.startswith("__")
+            }
+            recomputed_unsigned_digest = compute_payload_digest(unsigned_payload)
+
+            # Reconstruct the unsigned event representation as signed in Phase 1
+            unsigned_event = AuditEvent(
+                event_id=event.event_id,
+                event_type=event.event_type,
+                timestamp_utc=event.timestamp_utc,
+                assessment_id=event.assessment_id,
+                actor=event.actor,
+                payload_digest=recomputed_unsigned_digest,
+                previous_hash=event.previous_hash,
+                current_hash="",
+            )
+            expected_pre_sig_hash = compute_event_hash(unsigned_event)
+
+            # 1. Cryptographically bind pre_sig_hash to this event and payload
+            if pre_sig_hash != expected_pre_sig_hash:
+                return False
+
+            # 2. Verify the Ed25519 signature over the expected pre-signature hash
+            return crypto_verify(public_key, expected_pre_sig_hash, sig_hex)
+        except Exception as exc:
+            log.warning("verify_event_signature encountered an error: %s", exc)
+            return False
 
 
     # ------------------------------------------------------------------
