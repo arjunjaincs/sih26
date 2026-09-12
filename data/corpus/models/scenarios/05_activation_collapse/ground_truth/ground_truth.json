@@ -1,0 +1,26 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "05_activation_collapse",
+  "name": "Dead Representation Syndrome",
+  "category": "activation_behavior",
+  "framework": "onnx",
+  "has_reference": false,
+  "description": "Model activations clamped to zero across all non-zero deterministic probes.",
+  "expected_overall_risk": "MEDIUM",
+  "expected_confidence": "LOW",
+  "expected_findings": {
+    "mi03_activation_stats": {
+      "risk": "MEDIUM",
+      "subcategory": "activation_collapse"
+    },
+    "mi05_trigger_anomaly": {
+      "status": "PARTIAL",
+      "risk": "NONE",
+      "subcategory": "trigger_analysis_insufficient_diversity"
+    }
+  },
+  "expected_detector_status": {},
+  "expected_coverage_gaps": [],
+  "expected_disposition": "ASSESS",
+  "expected_error_code": null
+}

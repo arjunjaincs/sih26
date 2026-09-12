@@ -1,0 +1,16 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "06_trigger_convergence",
+  "name": "Trojan Shortcut Convergence",
+  "framework": "onnx",
+  "has_reference": false,
+  "models": [
+    {
+      "role": "candidate",
+      "file_name": "model.onnx",
+      "size_bytes": 78,
+      "sha256": "750eb9d2f96c40df81ce6f527d9906400c98847ad8a81c38448dada8981b69f4"
+    }
+  ],
+  "created_at": "2026-09-13T00:00:00Z"
+}

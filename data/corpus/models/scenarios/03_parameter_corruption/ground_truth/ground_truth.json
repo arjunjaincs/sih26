@@ -1,0 +1,29 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "03_parameter_corruption",
+  "name": "Non-Finite Weight Tampering",
+  "category": "parameter_modification",
+  "framework": "onnx",
+  "has_reference": true,
+  "description": "Candidate model initializers contain non-finite IEEE 754 NaN values.",
+  "expected_overall_risk": "HIGH",
+  "expected_confidence": "HIGH",
+  "expected_findings": {
+    "mi02_parameter_stats": {
+      "risk": "HIGH",
+      "subcategory": "parameter_corruption"
+    },
+    "mi03_activation_stats": {
+      "risk": "HIGH",
+      "subcategory": "activation_numerical_instability"
+    },
+    "mi04_reference_comparison": {
+      "risk": "MEDIUM",
+      "subcategory": "artifact_mismatch"
+    }
+  },
+  "expected_detector_status": {},
+  "expected_coverage_gaps": [],
+  "expected_disposition": "ASSESS",
+  "expected_error_code": null
+}

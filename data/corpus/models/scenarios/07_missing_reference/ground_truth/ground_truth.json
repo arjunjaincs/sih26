@@ -1,0 +1,32 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "07_missing_reference",
+  "name": "Standalone Baseline Enrollment",
+  "category": "missing_reference",
+  "framework": "onnx",
+  "has_reference": false,
+  "description": "Operational model baseline recorded cleanly when no reference artifact exists.",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": "HIGH",
+  "expected_findings": {
+    "mi01_fingerprint": {
+      "risk": "NONE",
+      "subcategory": "fingerprint_recorded"
+    },
+    "mi02_parameter_stats": {
+      "risk": "NONE"
+    },
+    "mi03_activation_stats": {
+      "risk": "NONE"
+    },
+    "mi05_trigger_anomaly": {
+      "risk": "NONE"
+    }
+  },
+  "expected_detector_status": {
+    "mi04_reference_comparison": "NOT_APPLICABLE"
+  },
+  "expected_coverage_gaps": [],
+  "expected_disposition": "ASSESS",
+  "expected_error_code": null
+}

@@ -1,0 +1,28 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "08_state_dict_coverage_gap",
+  "name": "Non-Executable State Dict",
+  "category": "access_mode_coverage_gap",
+  "framework": "pytorch",
+  "has_reference": false,
+  "description": "PyTorch state dict provides weight inspection while reporting explicit execution coverage gaps.",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": "LOW",
+  "expected_findings": {
+    "mi01_fingerprint": {
+      "risk": "NONE",
+      "status": "PARTIAL"
+    },
+    "mi02_parameter_stats": {
+      "risk": "NONE",
+      "status": "SUCCESS"
+    }
+  },
+  "expected_detector_status": {},
+  "expected_coverage_gaps": [
+    "model.integrity.mi03_activation_stats",
+    "model.integrity.mi05_trigger_anomaly"
+  ],
+  "expected_disposition": "ASSESS",
+  "expected_error_code": null
+}

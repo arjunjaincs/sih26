@@ -1,0 +1,37 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "01_clean_reference",
+  "name": "Clean Baseline with Reference",
+  "category": "clean_baseline",
+  "framework": "onnx",
+  "has_reference": true,
+  "description": "Pristine model with identical reference model confirming exact cryptographic match.",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": "HIGH",
+  "expected_findings": {
+    "mi01_fingerprint": {
+      "risk": "NONE",
+      "subcategory": "reference_match"
+    },
+    "mi02_parameter_stats": {
+      "risk": "NONE",
+      "subcategory": "parameter_stats_recorded"
+    },
+    "mi03_activation_stats": {
+      "risk": "NONE",
+      "subcategory": "activation_profile_recorded"
+    },
+    "mi04_reference_comparison": {
+      "risk": "NONE",
+      "subcategory": "reference_exact_match"
+    },
+    "mi05_trigger_anomaly": {
+      "risk": "NONE",
+      "subcategory": "trigger_search_completed"
+    }
+  },
+  "expected_detector_status": {},
+  "expected_coverage_gaps": [],
+  "expected_disposition": "ASSESS",
+  "expected_error_code": null
+}

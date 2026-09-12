@@ -1,0 +1,16 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "07_missing_reference",
+  "name": "Standalone Baseline Enrollment",
+  "framework": "onnx",
+  "has_reference": false,
+  "models": [
+    {
+      "role": "candidate",
+      "file_name": "model.onnx",
+      "size_bytes": 130,
+      "sha256": "53e9ea0e331425738d801ad828ca9444212dd4fee4d1f14b3a85558ddcc9cdbd"
+    }
+  ],
+  "created_at": "2026-09-13T00:00:00Z"
+}

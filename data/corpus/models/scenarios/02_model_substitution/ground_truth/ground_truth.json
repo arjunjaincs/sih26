@@ -1,0 +1,33 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "02_model_substitution",
+  "name": "Architecture / Graph Substitution",
+  "category": "substitution",
+  "framework": "onnx",
+  "has_reference": true,
+  "description": "Candidate graph (Relu) substituted for reference graph (Add_Bias), causing behavioral divergence.",
+  "expected_overall_risk": "MEDIUM",
+  "expected_confidence": "HIGH",
+  "expected_findings": {
+    "mi01_fingerprint": {
+      "risk": "NONE"
+    },
+    "mi02_parameter_stats": {
+      "risk": "NONE"
+    },
+    "mi03_activation_stats": {
+      "risk": "NONE"
+    },
+    "mi04_reference_comparison": {
+      "risk": "MEDIUM",
+      "subcategory": "behavioral_divergence"
+    },
+    "mi05_trigger_anomaly": {
+      "risk": "NONE"
+    }
+  },
+  "expected_detector_status": {},
+  "expected_coverage_gaps": [],
+  "expected_disposition": "ASSESS",
+  "expected_error_code": null
+}

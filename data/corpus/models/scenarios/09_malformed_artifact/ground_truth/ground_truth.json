@@ -1,0 +1,16 @@
+{
+  "manifest_version": "1.0.0",
+  "scenario_id": "09_malformed_artifact",
+  "name": "Corrupt Binary Header",
+  "category": "malformed_unsupported",
+  "framework": "onnx",
+  "has_reference": false,
+  "description": "Corrupted protobuf binary rejected fail-closed before execution.",
+  "expected_overall_risk": "NONE",
+  "expected_confidence": null,
+  "expected_findings": {},
+  "expected_detector_status": {},
+  "expected_coverage_gaps": [],
+  "expected_disposition": "REJECT",
+  "expected_error_code": "malformed"
+}
