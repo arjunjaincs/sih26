@@ -304,3 +304,52 @@ export type DatasetFormat = typeof DATASET_FORMATS[number];
 
 export const ASSESSMENT_STATES = ['created', 'ingesting', 'analyzing', 'complete', 'failed'] as const;
 export type AssessmentState = typeof ASSESSMENT_STATES[number];
+
+// ---------------------------------------------------------------------------
+// Phase 20: AI Copilot
+// ---------------------------------------------------------------------------
+
+export type AICopilotScope = 'assessment' | 'finding' | 'provenance' | 'audit';
+
+export type AIProviderStatus = 'connected' | 'not_configured' | 'unavailable' | 'disabled';
+
+export interface AISourceReference {
+  type: 'finding' | 'evidence' | 'limitation' | 'detector' | 'provenance' | 'audit' | string;
+  id: string;
+  label?: string | null;
+}
+
+export interface AIChatRequest {
+  message: string;
+  scope?: AICopilotScope;
+  finding_id?: string | null;
+}
+
+export interface AIChatResponse {
+  answer: string;
+  provider: string;
+  model: string;
+  scope: string;
+  grounded: boolean;
+  sources: AISourceReference[];
+}
+
+export interface AIStatusResponse {
+  configured: boolean;
+  provider: string;
+  model: string;
+  status: AIProviderStatus | string;
+  has_api_key: boolean;
+  privacy_disclosure: string;
+  available_models: string[];
+}
+
+export interface AIModelsResponse {
+  models: string[];
+  current_model: string;
+}
+
+export interface ConnectionTestResponse {
+  ok: boolean;
+  message: string;
+}

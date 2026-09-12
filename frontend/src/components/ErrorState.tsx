@@ -1,4 +1,5 @@
 import { AlertTriangle, WifiOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '../lib/cn';
 import { Button } from './Button';
 
@@ -7,6 +8,11 @@ interface ErrorStateProps {
   message: string;
   isNetwork?: boolean;
   onRetry?: () => void;
+  action?: {
+    label: string;
+    to?: string;
+    onClick?: () => void;
+  };
   className?: string;
 }
 
@@ -15,6 +21,7 @@ export function ErrorState({
   message,
   isNetwork,
   onRetry,
+  action,
   className,
 }: ErrorStateProps) {
   const Icon = isNetwork ? WifiOff : AlertTriangle;
@@ -44,6 +51,20 @@ export function ErrorState({
         <Button variant="secondary" size="sm" onClick={onRetry}>
           Try again
         </Button>
+      )}
+      {action && (
+        action.to ? (
+          <Link
+            to={action.to}
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-surface-2 hover:bg-surface text-1 transition-colors"
+          >
+            {action.label}
+          </Link>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={action.onClick}>
+            {action.label}
+          </Button>
+        )
       )}
     </div>
   );

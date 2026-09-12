@@ -34,6 +34,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 def _get_db_path() -> Path:
     raw = os.environ.get("PRAMAAN_DB_PATH", "")
@@ -110,6 +116,36 @@ class _Config:
     @property
     def max_model_size_mb(self) -> int:
         return _get_int("PRAMAAN_MAX_MODEL_SIZE_MB", 2048)
+
+    # -----------------------------------------------------------------------
+    # Phase 20: Optional Cloud AI Copilot (OpenRouter)
+    # -----------------------------------------------------------------------
+    @property
+    def ai_enabled(self) -> bool:
+        return os.environ.get("PRAMAAN_AI_ENABLED", "true").strip().lower() in ("1", "true", "yes")
+
+    @property
+    def openrouter_api_key(self) -> str:
+        return os.environ.get("OPENROUTER_API_KEY", "").strip()
+
+    @property
+    def openrouter_base_url(self) -> str:
+        return os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
+
+    @property
+    def openrouter_model(self) -> str:
+        return os.environ.get("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct").strip()
+
+    @property
+    def openrouter_timeout_seconds(self) -> float:
+        try:
+            return float(os.environ.get("OPENROUTER_TIMEOUT_SECONDS", "30.0"))
+        except ValueError:
+            return 30.0
+
+    @property
+    def openrouter_zdr(self) -> bool:
+        return os.environ.get("OPENROUTER_ZDR", "false").strip().lower() in ("1", "true", "yes")
 
 
 settings = _Config()

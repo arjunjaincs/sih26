@@ -8,7 +8,11 @@ import type {
   AssessmentCreateRequest,
   AssessmentListResponse,
   AssessmentResultSchema,
-  AssessmentSummarySchema,
+  AIChatRequest,
+  AIChatResponse,
+  AIModelsResponse,
+  AIStatusResponse,
+  ConnectionTestResponse,
   CapabilitiesResponse,
   DemoListResponse,
   EvidenceResponse,
@@ -203,5 +207,50 @@ export async function uploadAsset(
   }
 
   return response.json() as Promise<UploadResponse>;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 20: AI Copilot
+// ---------------------------------------------------------------------------
+
+export function getAIStatus(): Promise<AIStatusResponse> {
+  return apiFetch<AIStatusResponse>('/api/v1/ai/status');
+}
+
+export function getAIModels(): Promise<AIModelsResponse> {
+  return apiFetch<AIModelsResponse>('/api/v1/ai/models');
+}
+
+export function testAIConnection(): Promise<ConnectionTestResponse> {
+  return apiFetch<ConnectionTestResponse>('/api/v1/ai/test', {
+    method: 'POST',
+  });
+}
+
+export function chatWithCopilot(
+  assessmentId: string,
+  request: AIChatRequest,
+): Promise<AIChatResponse> {
+  return apiFetch<AIChatResponse>(
+    `/api/v1/assessments/${encodeURIComponent(assessmentId)}/ai/chat`,
+    {
+      method: 'POST',
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function explainFindingWithCopilot(
+  assessmentId: string,
+  findingId: string,
+  userQuery?: string,
+): Promise<AIChatResponse> {
+  return apiFetch<AIChatResponse>(
+    `/api/v1/assessments/${encodeURIComponent(assessmentId)}/findings/${encodeURIComponent(findingId)}/ai/explain`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ user_query: userQuery }),
+    },
+  );
 }
 

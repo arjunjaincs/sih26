@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useOutletContext, Link } from 'react-router-dom';
+import { useParams, useOutletContext } from 'react-router-dom';
 import { 
   SlidersHorizontal, 
   AlertTriangle, 
   CheckCircle2, 
-  XCircle, 
   Info, 
-  ShieldCheck, 
-  ArrowRight 
+  ShieldCheck 
 } from 'lucide-react';
 import type { AssessmentResultSchema } from '../types/api';
 import { getAssessment } from '../api/client';

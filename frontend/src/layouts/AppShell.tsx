@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { to: '/new', label: 'Assess' },
   { to: '/assessments', label: 'History' },
   { to: '/capabilities', label: 'Capabilities' },
+  { to: '/settings', label: 'Settings' },
 ];
 
 type BackendStatus = 'checking' | 'ok' | 'down';

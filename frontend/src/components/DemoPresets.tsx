@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, Check, ChevronRight, Loader2, Play } from 'lucide-react';
+import { Sparkles, Check, ChevronRight, Loader2 } from 'lucide-react';
 import type { DemoPresetSchema } from '../types/api';
 import { getDemos } from '../api/client';
 import { cn } from '../lib/cn';

@@ -6,7 +6,6 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   AlertTriangle, 
-  XCircle, 
   MinusCircle, 
   ChevronRight,
   ShieldCheck

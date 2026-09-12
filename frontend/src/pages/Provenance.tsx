@@ -2,18 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   KeyRound, 
-  ShieldCheck, 
-  ShieldAlert, 
-  CheckCircle2, 
-  XCircle, 
   Copy, 
   Check, 
-  Clock, 
-  FileText, 
-  Cpu, 
-  Database,
-  ArrowRight,
-  AlertTriangle
+  ArrowRight
 } from 'lucide-react';
 import type { ProvenanceResponse } from '../types/api';
 import { getProvenance } from '../api/client';

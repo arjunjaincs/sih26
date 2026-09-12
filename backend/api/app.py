@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.config import settings
 from backend.api.errors import register_exception_handlers
+from backend.api.routes.ai import router as ai_router
 from backend.api.routes.assessments import router as assessments_router
 from backend.api.routes.capabilities import router as capabilities_router
 from backend.api.routes.demos import router as demos_router
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
     application.include_router(assessments_router)
     application.include_router(demos_router)
     application.include_router(uploads_router)
+    application.include_router(ai_router)
 
     return application
 

@@ -3,11 +3,8 @@ import { useParams, useLocation, useOutletContext, Link } from 'react-router-dom
 import { 
   AlertTriangle, 
   ChevronRight, 
-  FileSearch, 
-  ShieldCheck, 
-  SlidersHorizontal,
   Info,
-  Layers
+  Sparkles,
 } from 'lucide-react';
 import type { AssessmentResultSchema } from '../types/api';
 import { getAssessment } from '../api/client';
@@ -119,6 +116,36 @@ export function AssessmentResult() {
           detectorsExecutedCount={result.detectors_executed?.length ?? 0}
           totalDetectorsCount={(result.detectors_executed?.length ?? 0) + (result.detectors_skipped?.length ?? 0)}
         />
+      </section>
+
+      {/* ── Copilot Consultation Bar ── */}
+      <section aria-label="Analyst Copilot Consultation" className="p-4 border border-purple-800/40 bg-purple-950/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-200">
+                PRAMAAN Analyst Copilot
+              </h3>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold tracking-wide uppercase bg-purple-500/20 border border-purple-500/30 text-purple-300">
+                CLOUD AI
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Consult Copilot to explain risk classifications, identify top investigation priorities, or evaluate coverage gaps.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => outletCtx?.openCopilot?.('assessment')}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 transition-colors shrink-0 shadow-sm"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Consult Copilot</span>
+        </button>
       </section>
 
       {/* ── Operational Ledger & Quick Navigation ── */}

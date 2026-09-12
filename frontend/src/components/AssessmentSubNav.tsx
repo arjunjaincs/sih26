@@ -5,7 +5,8 @@ import {
   FileSearch, 
   ShieldCheck, 
   KeyRound, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 
@@ -16,6 +17,7 @@ interface AssessmentSubNavProps {
   chainValid?: boolean | null;
   provenanceValid?: boolean | null;
   coverageGapsCount?: number;
+  onOpenCopilot?: () => void;
 }
 
 export function AssessmentSubNav({
@@ -25,6 +27,7 @@ export function AssessmentSubNav({
   chainValid,
   provenanceValid,
   coverageGapsCount,
+  onOpenCopilot,
 }: AssessmentSubNavProps) {
   const tabs = [
     {
@@ -81,8 +84,8 @@ export function AssessmentSubNav({
   ];
 
   return (
-    <div className="border-b border-[var(--border)] mb-6 overflow-x-auto">
-      <nav className="flex items-center gap-1.5 min-w-max pb-3" aria-label="Assessment views">
+    <div className="border-b border-[var(--border)] mb-6 flex items-center justify-between gap-3 overflow-x-auto pb-3">
+      <nav className="flex items-center gap-1.5 min-w-max" aria-label="Assessment views">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -120,6 +123,20 @@ export function AssessmentSubNav({
           );
         })}
       </nav>
+
+      {onOpenCopilot && (
+        <button
+          onClick={onOpenCopilot}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-700/50 transition-all duration-150 shrink-0 shadow-sm"
+          aria-label="Open Analyst Copilot"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <span>Analyst Copilot</span>
+          <span className="text-[9px] font-mono uppercase bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded border border-purple-500/30 font-semibold tracking-wider">
+            CLOUD AI
+          </span>
+        </button>
+      )}
     </div>
   );
 }

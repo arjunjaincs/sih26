@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, Outlet } from 'react-router-dom';
-import type { AssessmentResultSchema } from '../types/api';
+import type { AssessmentResultSchema, AICopilotScope } from '../types/api';
 import { getAssessment } from '../api/client';
 import { AssessmentHeader } from '../components/AssessmentHeader';
 import { AssessmentSubNav } from '../components/AssessmentSubNav';
+import { AnalystCopilot } from '../components/AnalystCopilot';
 import { ErrorState } from '../components/ErrorState';
 
 export interface AssessmentWorkspaceContext {
   result: AssessmentResultSchema | null;
   reloadAssessment: () => Promise<void>;
+  openCopilot: (scope?: AICopilotScope, findingId?: string | null) => void;
 }
 
 export function AssessmentWorkspaceLayout() {
@@ -19,6 +21,17 @@ export function AssessmentWorkspaceLayout() {
   const [result, setResult] = useState<AssessmentResultSchema | null>(stateResult);
   const [loading, setLoading] = useState<boolean>(!stateResult);
   const [error, setError] = useState<string | null>(null);
+
+  // Copilot drawer state
+  const [copilotOpen, setCopilotOpen] = useState<boolean>(false);
+  const [copilotScope, setCopilotScope] = useState<AICopilotScope>('assessment');
+  const [copilotFindingId, setCopilotFindingId] = useState<string | null>(null);
+
+  const openCopilot = (scope: AICopilotScope = 'assessment', findingId: string | null = null) => {
+    setCopilotScope(scope);
+    setCopilotFindingId(findingId);
+    setCopilotOpen(true);
+  };
 
   const fetchAssessment = async () => {
     if (!id) {
@@ -84,19 +97,35 @@ export function AssessmentWorkspaceLayout() {
         softwareVersion={result.software_version}
       />
 
-      {/* Unified Sub-navigation */}
+      {/* Unified Sub-navigation with Copilot Trigger */}
       <AssessmentSubNav
         assessmentId={result.assessment_id}
         findingsCount={result.findings_count}
         evidenceCount={result.evidence_count}
         chainValid={result.audit_chain_valid}
         coverageGapsCount={result.coverage_gaps?.length ?? 0}
+        onOpenCopilot={() => openCopilot('assessment')}
       />
 
       {/* Active Tab View */}
       <div id="assessment-workspace-content">
-        <Outlet context={{ result, reloadAssessment: fetchAssessment } satisfies AssessmentWorkspaceContext} />
+        <Outlet
+          context={{
+            result,
+            reloadAssessment: fetchAssessment,
+            openCopilot,
+          } satisfies AssessmentWorkspaceContext}
+        />
       </div>
+
+      {/* Analyst Copilot Drawer */}
+      <AnalystCopilot
+        assessmentId={result.assessment_id}
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        initialScope={copilotScope}
+        initialFindingId={copilotFindingId}
+      />
     </div>
   );
 }

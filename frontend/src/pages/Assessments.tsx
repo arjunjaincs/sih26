@@ -10,8 +10,6 @@ import {
   Check, 
   AlertTriangle, 
   CheckCircle2, 
-  FileDown, 
-  SlidersHorizontal,
   WifiOff
 } from 'lucide-react';
 import type { AssessmentSummarySchema } from '../types/api';
@@ -168,7 +166,7 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
 export function Assessments() {
   const [items, setItems] = useState<AssessmentSummarySchema[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('all');
@@ -237,7 +235,7 @@ export function Assessments() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5">
+          <Button variant="secondary" size="sm" onClick={load} disabled={loading} className="gap-1.5">
             <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
             <span>Refresh</span>
           </Button>

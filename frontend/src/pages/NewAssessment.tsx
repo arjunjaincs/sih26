@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, 
   X, 
@@ -10,7 +10,6 @@ import {
   ChevronDown, 
   ChevronUp, 
   Loader2, 
-  ShieldCheck, 
   AlertCircle 
 } from 'lucide-react';
 import { createAssessment, getCapabilities } from '../api/client';
@@ -106,7 +105,6 @@ function ModeToggle({ mode, onChange }: { mode: 'upload' | 'local'; onChange: (m
 
 export function NewAssessment() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [stage, setStage] = useState<Stage>('form');
   const [title, setTitle] = useState('');
 

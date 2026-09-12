@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Copy, Check, Shield } from 'lucide-react';
+import { ArrowLeft, Clock, Copy, Check } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { ReportDownloadButton } from './ReportDownloadButton';
 import { MetricTriad } from './MetricTriad';

@@ -9,7 +9,8 @@ import {
   Check, 
   FileText, 
   SlidersHorizontal,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import type { FindingsResponse, FindingSchema } from '../types/api';
 import { getFindings } from '../api/client';
@@ -43,10 +44,12 @@ function CopyMiniBtn({ value, label }: { value: string; label?: string }) {
 /* ── Single finding card (expandable) ── */
 function FindingCard({ 
   finding, 
-  assessmentId 
+  assessmentId,
+  onAskCopilot,
 }: { 
   finding: FindingSchema; 
   assessmentId?: string;
+  onAskCopilot?: (findingId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -165,12 +168,29 @@ function FindingCard({
             </div>
           )}
 
-          {/* Inspect Evidence Shortcut */}
+          {/* Inspect Evidence & Copilot Shortcut */}
           {assessmentId && (
-            <div className="pt-2 border-t border-[var(--border)] flex justify-end">
+            <div className="pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-2">
+              {onAskCopilot && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAskCopilot(finding.finding_id);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-700/50 transition-colors shadow-sm"
+                  title="Consult Copilot for this specific finding"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Ask Copilot</span>
+                  <span className="text-[9px] font-mono uppercase bg-purple-500/20 text-purple-300 px-1 py-0.2 rounded border border-purple-500/30">
+                    CLOUD AI
+                  </span>
+                </button>
+              )}
               <Link
                 to={`/assessments/${assessmentId}/evidence`}
-                className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-semibold"
+                className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-semibold ml-auto"
               >
                 <span>Inspect Supporting Evidence</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -187,11 +207,13 @@ function FindingCard({
 function DetectorGroup({ 
   detectorId, 
   findings,
-  assessmentId 
+  assessmentId,
+  onAskCopilot,
 }: { 
   detectorId: string; 
   findings: FindingSchema[];
   assessmentId?: string;
+  onAskCopilot?: (findingId: string) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -228,7 +250,12 @@ function DetectorGroup({
       {open && (
         <div className="space-y-3 pl-0 sm:pl-2">
           {findings.map(f => (
-            <FindingCard key={f.finding_id} finding={f} assessmentId={assessmentId} />
+            <FindingCard
+              key={f.finding_id}
+              finding={f}
+              assessmentId={assessmentId}
+              onAskCopilot={onAskCopilot}
+            />
           ))}
         </div>
       )}
@@ -287,6 +314,12 @@ export function Findings() {
     acc[det] = filtered.filter(f => (f.detector_id ?? 'Unknown') === det);
     return acc;
   }, {});
+
+  const onAskCopilot = (findingId: string) => {
+    if (outletCtx?.openCopilot) {
+      outletCtx.openCopilot('finding', findingId);
+    }
+  };
 
   return (
     <div className={outletCtx ? "space-y-6" : "max-w-5xl mx-auto px-6 py-8 space-y-6"}>
@@ -397,6 +430,7 @@ export function Findings() {
                 detectorId={det} 
                 findings={fs} 
                 assessmentId={id} 
+                onAskCopilot={onAskCopilot}
               />
             ))}
         </div>

@@ -12,6 +12,7 @@ import { Provenance } from './pages/Provenance';
 import { AuditTrail } from './pages/AuditTrail';
 import { ScopeLimitations } from './pages/ScopeLimitations';
 import { Capabilities } from './pages/Capabilities';
+import { Settings } from './pages/Settings';
 
 export function App() {
   return (
@@ -35,10 +36,11 @@ export function App() {
               <Route path="limitations" element={<ScopeLimitations />} />
             </Route>
 
-            {/* Standalone / Legacy routes */}
+            {/* Standalone / Auxiliary routes */}
             <Route path="audit" element={<AuditTrail />} />
             <Route path="findings" element={<Findings />} />
             <Route path="capabilities" element={<Capabilities />} />
+            <Route path="settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
