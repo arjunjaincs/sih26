@@ -24,6 +24,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.api.config import settings
+
 
 class TestAssetUploads:
     def test_upload_valid_model_returns_201(self, client: TestClient, onnx_model: Path):
@@ -266,4 +268,35 @@ class TestAssetUploads:
         assert "data\\blobs" not in body_str
         assert "data/blobs" not in body_str
         assert "C:\\" not in body_str
+
+    def test_upload_corrupted_zip_rejected_with_422(self, client: TestClient):
+        corrupted_content = b"PK\x03\x04\x00\x00\x00\x00CORRUPTED_BYTES_HERE_NOT_A_VALID_ZIP"
+        extracted_dir = settings.blob_dir / "extracted"
+        extracted_before = set(extracted_dir.glob("*")) if extracted_dir.exists() else set()
+
+        response = client.post(
+            "/api/v1/uploads",
+            files={"file": ("corrupted.zip", corrupted_content, "application/zip")},
+            data={"asset_type": "dataset"},
+        )
+
+        assert response.status_code == 422
+        body = response.json()
+        assert "detail" in body
+        assert body["detail"]["error"] == "corrupt_archive"
+        assert "Invalid or corrupted zip archive" in body["detail"]["message"]
+
+        extracted_after = set(extracted_dir.glob("*")) if extracted_dir.exists() else set()
+        assert extracted_after == extracted_before
+
+    def test_upload_corrupted_zip_inferred_dataset_rejected_with_422(self, client: TestClient):
+        response = client.post(
+            "/api/v1/uploads",
+            files={"file": ("damaged.zip", b"not-a-valid-zip-file-at-all", "application/zip")},
+        )
+        assert response.status_code == 422
+        body = response.json()
+        assert "detail" in body
+        assert body["detail"]["error"] == "corrupt_archive"
+        assert "Invalid or corrupted zip archive" in body["detail"]["message"]
 

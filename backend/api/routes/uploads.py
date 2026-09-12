@@ -88,55 +88,67 @@ def _safe_extract_zip(zip_path: Path, target_dir: Path, max_bytes: int, max_file
     total_uncompressed = 0
     file_count = 0
 
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        infolist = zf.infolist()
-        if len(infolist) > max_files:
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            infolist = zf.infolist()
+            if len(infolist) > max_files:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"error": "archive_too_many_files", "message": f"Archive contains {len(infolist)} files (limit: {max_files})."}
+                )
+
+            for member in infolist:
+                # Check for path traversal in archive member
+                member_path = member.filename
+                if ".." in member_path or member_path.startswith("/") or member_path.startswith("\\"):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={"error": "path_traversal", "message": "Archive contains forbidden path traversal sequences."}
+                    )
+
+                # Prevent zip bombs
+                total_uncompressed += member.file_size
+                if total_uncompressed > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={"error": "file_too_large", "message": "Uncompressed archive size exceeds limit."}
+                    )
+
+                # Check target path is strictly inside destination
+                dest_file = (target_dir / member_path).resolve()
+                if not str(dest_file).startswith(str(target_resolved)):
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={"error": "path_traversal", "message": "Archive entry attempts to escape destination directory."}
+                    )
+
+            # Safe extraction
+            for member in infolist:
+                dest_file = target_dir / member.filename
+                if member.is_dir():
+                    dest_file.mkdir(parents=True, exist_ok=True)
+                else:
+                    dest_file.parent.mkdir(parents=True, exist_ok=True)
+                    with zf.open(member) as src, open(dest_file, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    file_count += 1
+
+        if file_count == 0:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"error": "archive_too_many_files", "message": f"Archive contains {len(infolist)} files (limit: {max_files})."}
+                detail={"error": "empty_archive", "message": "Archive contains no extractable files."}
             )
-
-        for member in infolist:
-            # Check for path traversal in archive member
-            member_path = member.filename
-            if ".." in member_path or member_path.startswith("/") or member_path.startswith("\\"):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail={"error": "path_traversal", "message": "Archive contains forbidden path traversal sequences."}
-                )
-
-            # Prevent zip bombs
-            total_uncompressed += member.file_size
-            if total_uncompressed > max_bytes:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail={"error": "file_too_large", "message": "Uncompressed archive size exceeds limit."}
-                )
-
-            # Check target path is strictly inside destination
-            dest_file = (target_dir / member_path).resolve()
-            if not str(dest_file).startswith(str(target_resolved)):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail={"error": "path_traversal", "message": "Archive entry attempts to escape destination directory."}
-                )
-
-        # Safe extraction
-        for member in infolist:
-            dest_file = target_dir / member.filename
-            if member.is_dir():
-                dest_file.mkdir(parents=True, exist_ok=True)
-            else:
-                dest_file.parent.mkdir(parents=True, exist_ok=True)
-                with zf.open(member) as src, open(dest_file, "wb") as dst:
-                    shutil.copyfileobj(src, dst)
-                file_count += 1
-
-    if file_count == 0:
+    except (zipfile.BadZipFile, zipfile.LargeZipFile) as e:
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"error": "empty_archive", "message": "Archive contains no extractable files."}
-        )
+            detail={"error": "corrupt_archive", "message": f"Invalid or corrupted zip archive: {e}"},
+        ) from e
+    except HTTPException:
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)
+        raise
 
 
 @router.post(
