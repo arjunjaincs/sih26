@@ -1,0 +1,14 @@
+{
+  "name": "pramaan",
+  "version": "1.0.0",
+  "description": "PRAMAAN — Offline integrity assurance workstation for computer vision data, models, and inference",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "electron:dev": "electron electron/main.cjs",
+    "start": "electron electron/main.cjs"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11"
+  }
+}
