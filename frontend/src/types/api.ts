@@ -34,6 +34,16 @@ export interface DetectorCapabilitySchema {
   description: string;
   applicable_asset_types: string[];
   available: boolean;
+  code?: string | null;
+  pillar?: string | null;
+  access_requirements?: string | null;
+  dependencies?: string[];
+  supported_formats?: string[];
+  what_it_analyzes?: string | null;
+  evidence_produced?: string[];
+  confidence_semantics?: string | null;
+  limitations?: string[];
+  reference_method?: string | null;
 }
 
 export interface CapabilitiesResponse {
@@ -209,6 +219,10 @@ export interface DemoPresetSchema {
   expected_confidence: string;
   detectors_targeted: string[];
   payload: AssessmentCreateRequest;
+  expected_layer?: string;
+  expected_finding_type?: string;
+  complexity?: string;
+  is_deterministic_corpus?: boolean;
 }
 
 export interface DemoListResponse {
@@ -261,6 +275,36 @@ export interface EvidenceResponse {
   assessment_id: string;
   count: number;
   evidence: EvidenceSchema[];
+}
+
+export interface EvidenceImagePreview {
+  sample_id?: string | null;
+  file_name: string;
+  preview_url: string;
+  width?: number | null;
+  height?: number | null;
+  size_bytes?: number | null;
+  sha256?: string | null;
+  caption?: string | null;
+}
+
+export interface EvidencePreviewResponse {
+  evidence_id: string;
+  assessment_id: string;
+  finding_id: string;
+  detector_id: string;
+  evidence_type: string;
+  preview_type: 'image' | 'image_cluster' | 'structured' | 'json' | 'structured_text' | 'unsupported';
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  title: string;
+  description: string;
+  artifact_sha256?: string | null;
+  images: EvidenceImagePreview[];
+  text_content?: string | null;
+  structured_content?: Record<string, unknown> | null;
+  unsupported_reason?: string | null;
+  truncated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -352,4 +396,55 @@ export interface AIModelsResponse {
 export interface ConnectionTestResponse {
   ok: boolean;
   message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Global Search
+// ---------------------------------------------------------------------------
+
+export interface SearchResultAssessment {
+  assessment_id: string;
+  title: string;
+  state: string;
+  created_at: string;
+  target_url: string;
+}
+
+export interface SearchResultFinding {
+  finding_id: string;
+  assessment_id: string;
+  title: string;
+  detector_id: string;
+  detector_code?: string | null;
+  severity: string;
+  category: string;
+  asset_name?: string | null;
+  target_url: string;
+}
+
+export interface SearchResultEvidence {
+  evidence_id: string;
+  finding_id: string;
+  assessment_id: string;
+  detector_id: string;
+  detector_code?: string | null;
+  evidence_type: string;
+  description: string;
+  finding_title?: string | null;
+  target_url: string;
+}
+
+export interface SearchCategoryCounts {
+  assessments: number;
+  findings: number;
+  evidence: number;
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  total_matches: number;
+  counts: SearchCategoryCounts;
+  assessments: SearchResultAssessment[];
+  findings: SearchResultFinding[];
+  evidence: SearchResultEvidence[];
 }

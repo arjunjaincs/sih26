@@ -1,3 +1,5 @@
+@import './fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,6 +67,14 @@
     --status-failed:   #B91C1C;
     --status-running:  #1B4F8A;
     --status-pending:  #6B7F93;
+
+    /* ── Compatibility Aliases ── */
+    --accent-hover:    var(--accent-2);
+    --text-primary:    var(--text-1);
+    --text-secondary:  var(--text-2);
+    --text-muted:      var(--text-3);
+    --surface-1:       var(--surface);
+    --accent-light:    var(--accent-bg);
   }
 
   .dark {
@@ -124,6 +134,14 @@
     --status-failed:   #EF4444;
     --status-running:  #3B82F6;
     --status-pending:  #506178;
+
+    /* ── Compatibility Aliases ── */
+    --accent-hover:    var(--accent-2);
+    --text-primary:    var(--text-1);
+    --text-secondary:  var(--text-2);
+    --text-muted:      var(--text-3);
+    --surface-1:       var(--surface);
+    --accent-light:    var(--accent-bg);
   }
 
   html {

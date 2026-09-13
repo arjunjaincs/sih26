@@ -59,6 +59,16 @@ class DetectorCapabilitySchema(BaseModel):
     available: bool = Field(
         description="True if can_run() pre-flight checks pass on a minimal context"
     )
+    code: str | None = None
+    pillar: str | None = None
+    access_requirements: str | None = None
+    dependencies: list[str] = Field(default_factory=list)
+    supported_formats: list[str] = Field(default_factory=list)
+    what_it_analyzes: str | None = None
+    evidence_produced: list[str] = Field(default_factory=list)
+    confidence_semantics: str | None = None
+    limitations: list[str] = Field(default_factory=list)
+    reference_method: str | None = None
 
 
 class CapabilitiesResponse(BaseModel):
@@ -330,6 +340,36 @@ class EvidenceResponse(BaseModel):
     evidence: list[EvidenceSchema]
 
 
+class EvidenceImagePreview(BaseModel):
+    sample_id: str | None = None
+    file_name: str
+    preview_url: str
+    width: int | None = None
+    height: int | None = None
+    size_bytes: int | None = None
+    sha256: str | None = None
+    caption: str | None = None
+
+
+class EvidencePreviewResponse(BaseModel):
+    evidence_id: str
+    assessment_id: str
+    finding_id: str
+    detector_id: str
+    evidence_type: str
+    preview_type: str  # "image" | "image_cluster" | "structured" | "json" | "unsupported"
+    mime_type: str | None = None
+    size_bytes: int | None = None
+    title: str
+    description: str
+    artifact_sha256: str | None = None
+    images: list[EvidenceImagePreview] = []
+    text_content: str | None = None
+    structured_content: dict[str, Any] | None = None
+    unsupported_reason: str | None = None
+    truncated: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Audit schema
 # ---------------------------------------------------------------------------
@@ -393,9 +433,63 @@ class DemoPresetSchema(BaseModel):
     expected_confidence: str
     detectors_targeted: list[str]
     payload: dict[str, Any]
+    expected_layer: str | None = None
+    expected_finding_type: str | None = None
+    complexity: str | None = None
+    is_deterministic_corpus: bool = True
 
 
 class DemoListResponse(BaseModel):
     total: int
     demos: list[DemoPresetSchema]
 
+
+# ---------------------------------------------------------------------------
+# Global Search schemas
+# ---------------------------------------------------------------------------
+
+class SearchResultAssessment(BaseModel):
+    assessment_id: str
+    title: str
+    state: str
+    created_at: str
+    target_url: str
+
+
+class SearchResultFinding(BaseModel):
+    finding_id: str
+    assessment_id: str
+    title: str
+    detector_id: str
+    detector_code: str | None = None
+    severity: str
+    category: str
+    asset_name: str | None = None
+    target_url: str
+
+
+class SearchResultEvidence(BaseModel):
+    evidence_id: str
+    finding_id: str
+    assessment_id: str
+    detector_id: str
+    detector_code: str | None = None
+    evidence_type: str
+    description: str
+    finding_title: str | None = None
+    target_url: str
+
+
+class SearchCategoryCounts(BaseModel):
+    assessments: int = 0
+    findings: int = 0
+    evidence: int = 0
+
+
+class GlobalSearchResponse(BaseModel):
+    query: str
+    total_matches: int
+    counts: SearchCategoryCounts
+    assessments: list[SearchResultAssessment] = Field(default_factory=list)
+    findings: list[SearchResultFinding] = Field(default_factory=list)
+    evidence: list[SearchResultEvidence] = Field(default_factory=list)

@@ -51,12 +51,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
+        aria-busy={isLoading}
+        aria-disabled={disabled || isLoading}
         className={cn(
           'inline-flex items-center justify-center font-medium rounded border',
           'transition-all duration-150 cursor-pointer',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1',
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],
+          (disabled || isLoading) && 'opacity-60 cursor-not-allowed active:scale-100',
           className,
         )}
         {...props}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Database, 
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { DetectorRunSchema } from '../types/api';
 import { cn } from '../lib/cn';
+import { DetectorDetailModal } from './DetectorDetailModal';
 
 interface DetectorMatrixProps {
   runs: DetectorRunSchema[];
@@ -67,6 +69,8 @@ function getShortDetectorId(id: string): string {
 }
 
 export function DetectorMatrix({ runs, assessmentId }: DetectorMatrixProps) {
+  const [selectedDetector, setSelectedDetector] = useState<string | null>(null);
+
   const runMap = new Map<string, DetectorRunSchema>();
   for (const r of runs) {
     const short = getShortDetectorId(r.detector_id);
@@ -134,14 +138,20 @@ export function DetectorMatrix({ runs, assessmentId }: DetectorMatrixProps) {
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <code className="font-mono font-bold text-1 text-[11px] px-1.5 py-0.5 rounded bg-surface border border-[var(--border)]">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetector(targetShort)}
+                          className="flex items-center gap-1.5 min-w-0 text-left group hover:opacity-80 transition-opacity focus:outline-none"
+                          title={`View ${targetShort} Method Details`}
+                          data-testid={`detector-tile-${targetShort.toLowerCase()}`}
+                        >
+                          <code className="font-mono font-bold text-1 text-[11px] px-1.5 py-0.5 rounded bg-surface border border-[var(--border)] group-hover:border-accent">
                             {targetShort}
                           </code>
-                          <span className="font-medium text-1 truncate" title={detectorName}>
+                          <span className="font-medium text-1 truncate">
                             {detectorName}
                           </span>
-                        </div>
+                        </button>
 
                         {/* Status Icon */}
                         <div className="flex-shrink-0">
@@ -170,27 +180,38 @@ export function DetectorMatrix({ runs, assessmentId }: DetectorMatrixProps) {
                             : status}
                         </span>
 
-                        {isAudit ? (
-                          <Link
-                            to={`/assessments/${assessmentId}/audit`}
-                            className="inline-flex items-center gap-0.5 text-accent hover:underline font-semibold"
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetector(targetShort)}
+                            className="text-[10px] font-mono text-3 hover:text-accent hover:underline focus:outline-none"
+                            title="Inspect detector method specification"
                           >
-                            <span>Verify</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </Link>
-                        ) : hasFindings ? (
-                          <Link
-                            to={`/assessments/${assessmentId}/findings`}
-                            className="inline-flex items-center gap-0.5 text-accent hover:underline font-semibold"
-                          >
-                            <span>Inspect</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </Link>
-                        ) : (
-                          <span className="font-mono text-[10px] text-3">
-                            {run?.evidence_count ?? 0} ev
-                          </span>
-                        )}
+                            Method
+                          </button>
+
+                          {isAudit ? (
+                            <Link
+                              to={`/assessments/${assessmentId}/audit`}
+                              className="inline-flex items-center gap-0.5 text-accent hover:underline font-semibold"
+                            >
+                              <span>Verify</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          ) : hasFindings ? (
+                            <Link
+                              to={`/assessments/${assessmentId}/findings`}
+                              className="inline-flex items-center gap-0.5 text-accent hover:underline font-semibold"
+                            >
+                              <span>Inspect</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          ) : (
+                            <span className="font-mono text-[10px] text-3">
+                              {run?.evidence_count ?? 0} ev
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -200,6 +221,12 @@ export function DetectorMatrix({ runs, assessmentId }: DetectorMatrixProps) {
           );
         })}
       </div>
+
+      {/* Detector Method Detail Modal */}
+      <DetectorDetailModal
+        detectorIdOrCode={selectedDetector}
+        onClose={() => setSelectedDetector(null)}
+      />
     </div>
   );
 }

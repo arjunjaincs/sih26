@@ -7,10 +7,12 @@ import {
   Check, 
   Copy, 
   RefreshCw, 
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  FileCheck
 } from 'lucide-react';
 import type { AuditResponse, AuditEventSchema } from '../types/api';
-import { getAudit } from '../api/client';
+import { getAudit, exportAuditJson } from '../api/client';
 import { ErrorState } from '../components/ErrorState';
 import { AssessmentSubNav } from '../components/AssessmentSubNav';
 import { formatDatetime } from '../lib/format';
@@ -127,6 +129,9 @@ export function AuditTrail() {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [verifiedNotice, setVerifiedNotice] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportSuccessNotice, setExportSuccessNotice] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const outletCtx = useOutletContext<AssessmentWorkspaceContext | undefined>();
 
@@ -158,6 +163,23 @@ export function AuditTrail() {
         setError(err.message);
         setVerifying(false);
       });
+  }
+
+  async function handleExportAudit() {
+    if (!id) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const safeShortId = id.slice(0, 8);
+      await exportAuditJson(id, `pramaan_audit_export_${safeShortId}.json`);
+      setExporting(false);
+      setExportSuccessNotice(true);
+      setTimeout(() => setExportSuccessNotice(false), 4500);
+    } catch (err: unknown) {
+      setExporting(false);
+      setExportError(err instanceof Error ? err.message : 'Failed to export verified audit trail.');
+      setTimeout(() => setExportError(null), 5000);
+    }
   }
 
   if (loading) {
@@ -195,11 +217,14 @@ export function AuditTrail() {
       {/* Header */}
       <div className="border-b border-[var(--border)] pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <span className="font-mono text-[11px] font-bold text-accent px-2 py-0.5 rounded bg-[var(--accent-bg)] border border-accent/20">
               TAMPER-EVIDENT LEDGER
             </span>
             <span className="text-xs text-3 font-mono">AT-01 SPECIFICATION</span>
+            <span className="text-[11px] font-mono text-2 px-2 py-0.5 rounded bg-surface-2 border border-[var(--border)]" title="All exports are structured verification artifacts">
+              VERIFICATION ARTIFACT
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-1 tracking-tight">
             Audit Trail
@@ -209,7 +234,7 @@ export function AuditTrail() {
           </p>
         </div>
 
-        {/* Chain Validation Badge & Verify Action */}
+        {/* Chain Validation Badge & Actions */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
           {chainValid !== undefined && (
             <div className={cn(
@@ -228,9 +253,22 @@ export function AuditTrail() {
             onClick={handleVerify}
             disabled={verifying}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-1 hover:bg-surface-2 transition-colors disabled:opacity-50"
+            title="Re-verify cryptographic hash chain"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', verifying && 'animate-spin text-accent')} />
             <span>{verifying ? 'Verifying…' : 'Verify Chain'}</span>
+          </button>
+
+          <button
+            type="button"
+            id="export-audit-btn"
+            onClick={handleExportAudit}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-accent/40 bg-accent/10 hover:bg-accent/20 text-xs font-semibold text-accent transition-colors disabled:opacity-50"
+            title="Export verified audit trail as structured JSON (Verification Artifact)"
+          >
+            <Download className={cn('w-3.5 h-3.5', exporting && 'animate-bounce')} />
+            <span>{exporting ? 'Exporting…' : 'Export Audit'}</span>
           </button>
         </div>
       </div>
@@ -243,6 +281,28 @@ export function AuditTrail() {
             <span className="font-medium">
               Hash chain verification passed: all {events.length} event hashes are mathematically linked and unhampered.
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Live Export Notice Banner */}
+      {exportSuccessNotice && (
+        <div className="card p-3 rounded-lg border border-accent/30 bg-[var(--accent-bg)] flex items-center justify-between text-xs text-accent">
+          <div className="flex items-center gap-2">
+            <FileCheck className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">
+              Verification Artifact downloaded: structured JSON audit trail containing hashes, sequence, and verification results.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Export Error Banner */}
+      {exportError && (
+        <div className="card p-3 rounded-lg border border-[var(--red)]/30 bg-[var(--red-bg)] flex items-center justify-between text-xs text-[var(--red)]">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">{exportError}</span>
           </div>
         </div>
       )}

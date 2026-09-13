@@ -96,11 +96,12 @@ class DI03TriggerAnomalyDetector:
         if context.conn is None:
             return CanRunResult(ok=False, reason="Database connection required")
 
+        # Use COUNT query — avoids loading all sample rows just to check the count.
         sample_repo = SampleRepository(context.conn)
-        samples = sample_repo.list_by_dataset(context.asset_id)
-        if not samples:
+        count = sample_repo.count_by_dataset(context.asset_id)
+        if count == 0:
             return CanRunResult(ok=False, reason="Dataset not found or contains zero samples")
-        if len(samples) < 3:
+        if count < 3:
             return CanRunResult(
                 ok=False,
                 reason="Insufficient samples for trigger recurrence analysis (minimum 3 samples required)",
@@ -134,17 +135,25 @@ class DI03TriggerAnomalyDetector:
         findings: list[Finding] = []
         evidence_list: list[Evidence] = []
 
+        # Build a single filename → Path lookup from one rglob pass.
+        # This replaces N per-sample rglob calls with a single O(files) traversal.
+        disk_files: dict[str, Path] = {}
+        for p in source_dir.rglob("*"):
+            if p.is_file():
+                # Use the bare filename as key (matches s.file_name convention).
+                # If multiple files share the same filename in different subdirs,
+                # the first one found wins — consistent with prior rglob[0] behavior.
+                disk_files.setdefault(p.name, p)
+
         # Find image files on disk for each sample
         sample_paths: dict[str, Path] = {}
         for s in samples:
+            # Fast O(1) lookup: direct child first, then fallback to rglob map.
             cand = source_dir / s.file_name
             if cand.is_file():
                 sample_paths[s.sample_id] = cand
-            else:
-                # Recursive search if in subdirectories
-                matches = list(source_dir.rglob(s.file_name))
-                if matches:
-                    sample_paths[s.sample_id] = matches[0]
+            elif s.file_name in disk_files:
+                sample_paths[s.sample_id] = disk_files[s.file_name]
 
         if len(sample_paths) < 3:
             output.status = DetectorStatus.SKIPPED

@@ -16,7 +16,9 @@ import type { AssessmentSummarySchema } from '../types/api';
 import { listAssessments, NetworkError } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { ReportDownloadButton } from '../components/ReportDownloadButton';
+import { ExportJsonButton } from '../components/ExportJsonButton';
 import { Button } from '../components/Button';
+import { MetricTooltip, AssuranceInterpretationGuide } from '../components/MetricTooltip';
 import { formatDatetime, formatDuration, formatPercent } from '../lib/format';
 import { cn } from '../lib/cn';
 
@@ -116,6 +118,7 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
           >
             <span className="text-[10px] opacity-75 font-normal">RISK:</span>
             <span>{a.overall_risk.toUpperCase()}</span>
+            <MetricTooltip metric="risk" align="left" triggerClassName="p-0 text-inherit opacity-70 hover:opacity-100" />
           </div>
         )}
 
@@ -124,6 +127,7 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
           <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-accent/30 bg-[var(--accent-bg)] text-accent font-mono text-xs font-bold">
             <span className="text-[10px] opacity-75 font-normal">COV:</span>
             <span>{formatPercent(a.coverage_fraction)}</span>
+            <MetricTooltip metric="coverage" align="right" triggerClassName="p-0 text-inherit opacity-70 hover:opacity-100" />
           </div>
         )}
 
@@ -144,6 +148,12 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
       {/* Right block: Action buttons */}
       <div className="flex items-center gap-2 flex-shrink-0 self-end lg:self-auto">
         <ReportDownloadButton
+          assessmentId={a.assessment_id}
+          size="sm"
+          variant="outline"
+          className="h-8"
+        />
+        <ExportJsonButton
           assessmentId={a.assessment_id}
           size="sm"
           variant="outline"
@@ -249,6 +259,9 @@ export function Assessments() {
         </div>
       </div>
 
+      {/* ── Assurance Metric Semantics & Decoupled Interpretation ── */}
+      <AssuranceInterpretationGuide />
+
       {/* ── Search & Filter Bar ── */}
       <div className="card p-3 border border-[var(--border)] bg-surface rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Search */}
@@ -323,9 +336,24 @@ export function Assessments() {
                 ? 'Try clearing your search query or filters.'
                 : 'No assessments have been executed in this environment yet.'}
             </p>
+            {(search || riskFilter !== 'all' || statusFilter !== 'all') && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setRiskFilter('all');
+                    setStatusFilter('all');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-surface hover:bg-surface-2 text-xs font-semibold text-1 transition-colors focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  Clear search & filters
+                </button>
+              </div>
+            )}
             <Link
               to="/new"
-              className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-semibold pt-1"
+              className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-semibold pt-1 focus-visible:ring-1"
             >
               <span>Run your first assessment</span>
               <ChevronRight className="w-3.5 h-3.5" />

@@ -366,6 +366,39 @@ class TestFindingAndEvidenceRepository:
         assert len(evidence) == 1
         assert evidence[0].data["distance"] == 3
 
+    def test_finding_row_deserialization_case_insensitivity(self, db):
+        aid, asid = self._setup(db)
+        db.execute(
+            """
+            INSERT INTO findings
+                (finding_id, assessment_id, asset_id, category, subcategory,
+                 severity, title, description, detection_method, detector_id,
+                 limitations_json, recommended_disposition, source, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                "test-uppercase-sev-id",
+                aid,
+                asid,
+                "DATA_INTEGRITY",
+                "duplicate",
+                "HIGH",
+                "Adversarial Trigger Finding",
+                "Testing case insensitivity",
+                "Method",
+                "detector.id",
+                "[]",
+                "FLAG",
+                "LIVE_ANALYSIS",
+                "2026-09-10T13:00:00Z",
+            ),
+        )
+        db.commit()
+        findings = FindingRepository(db).list_by_assessment(aid)
+        assert len(findings) == 1
+        assert findings[0].severity == Severity.HIGH
+        assert findings[0].category == FindingCategory.DATA_INTEGRITY
+
 
 # ---------------------------------------------------------------------------
 # Audit repository

@@ -5,6 +5,7 @@ import {
   ChevronRight, 
   Info,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import type { AssessmentResultSchema } from '../types/api';
 import { getAssessment } from '../api/client';
@@ -105,6 +106,38 @@ export function AssessmentResult() {
         </>
       )}
 
+      {/* ── Deterministic Offline Corpus Designation Banner ── */}
+      {result.title?.toLowerCase().startsWith('demo:') && (
+        <div className="p-4 rounded-xl border border-accent/30 bg-gradient-to-r from-[var(--accent-bg)]/40 via-surface to-surface-2/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/40 text-accent flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-[10px] font-bold text-accent px-2 py-0.5 rounded bg-accent/10 border border-accent/25 uppercase tracking-wider">
+                  Deterministic Offline Corpus Scenario
+                </span>
+                <span className="text-[10px] font-mono text-3 bg-surface px-2 py-0.5 rounded border border-[var(--border)]">
+                  AIR-GAPPED · AUTHENTIC DETECTORS
+                </span>
+              </div>
+              <p className="text-xs text-3 mt-1 leading-relaxed">
+                This evaluation was executed against local authentic deterministic corpus assets without mocked findings. Real cryptographic, numerical, and perceptual detectors ran in air-gapped memory.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/new"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[var(--border)] bg-surface hover:bg-surface-2 text-xs font-semibold text-1 hover:border-accent/40 transition-colors shrink-0 shadow-sm self-start sm:self-auto"
+          >
+            <span>Create Custom Assessment</span>
+            <ChevronRight className="w-3.5 h-3.5 text-accent" />
+          </Link>
+        </div>
+      )}
+
       {/* ── Metric Triad: RISK, CONFIDENCE, COVERAGE (Decoupled & Independent) ── */}
       <section aria-label="Assurance Metrics">
         <MetricTriad
@@ -119,21 +152,21 @@ export function AssessmentResult() {
       </section>
 
       {/* ── Copilot Consultation Bar ── */}
-      <section aria-label="Analyst Copilot Consultation" className="p-4 border border-purple-800/40 bg-purple-950/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+      <section aria-label="Analyst Copilot Consultation" className="p-4 border border-purple-500/25 bg-purple-500/5 dark:bg-purple-950/20 dark:border-purple-800/40 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 shrink-0">
+          <div className="p-2 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-300 shrink-0">
             <Sparkles className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-slate-200">
+              <h3 className="text-sm font-semibold text-1">
                 PRAMAAN Analyst Copilot
               </h3>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold tracking-wide uppercase bg-purple-500/20 border border-purple-500/30 text-purple-300">
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold tracking-wide uppercase bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300">
                 CLOUD AI
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-2">
               Consult Copilot to explain risk classifications, identify top investigation priorities, or evaluate coverage gaps.
             </p>
           </div>

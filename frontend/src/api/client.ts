@@ -15,8 +15,10 @@ import type {
   ConnectionTestResponse,
   CapabilitiesResponse,
   DemoListResponse,
+  EvidencePreviewResponse,
   EvidenceResponse,
   FindingsResponse,
+  GlobalSearchResponse,
   HealthResponse,
   ProvenanceResponse,
   UploadResponse,
@@ -125,6 +127,15 @@ export function getEvidence(id: string): Promise<EvidenceResponse> {
   return apiFetch<EvidenceResponse>(`/api/v1/assessments/${encodeURIComponent(id)}/evidence`);
 }
 
+export function getEvidencePreview(
+  assessmentId: string,
+  evidenceId: string
+): Promise<EvidencePreviewResponse> {
+  return apiFetch<EvidencePreviewResponse>(
+    `/api/v1/assessments/${encodeURIComponent(assessmentId)}/evidence/${encodeURIComponent(evidenceId)}/preview`
+  );
+}
+
 export function getAudit(id: string): Promise<AuditResponse> {
   return apiFetch<AuditResponse>(`/api/v1/assessments/${encodeURIComponent(id)}/audit`);
 }
@@ -165,6 +176,65 @@ export async function downloadReport(id: string, filename?: string): Promise<voi
   document.body.removeChild(a);
   window.URL.revokeObjectURL(blobUrl);
 }
+
+export function getExportJsonUrl(id: string): string {
+  return `${BASE_URL}/api/v1/assessments/${encodeURIComponent(id)}/export/json`;
+}
+
+export async function exportAssessmentJson(id: string, filename?: string): Promise<void> {
+  const url = getExportJsonUrl(id);
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET' });
+  } catch (err) {
+    throw new NetworkError(err);
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, 'export_json_failed', 'Failed to generate or export assessment assurance package JSON.');
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  const safeShortId = id.slice(0, 8);
+  a.download = filename || `pramaan_assurance_export_${safeShortId}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(blobUrl);
+}
+
+export function getExportAuditJsonUrl(id: string): string {
+  return `${BASE_URL}/api/v1/assessments/${encodeURIComponent(id)}/audit/export`;
+}
+
+export async function exportAuditJson(id: string, filename?: string): Promise<void> {
+  const url = getExportAuditJsonUrl(id);
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET' });
+  } catch (err) {
+    throw new NetworkError(err);
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, 'export_audit_failed', 'Failed to generate or export verified audit trail JSON.');
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  const safeShortId = id.slice(0, 8);
+  a.download = filename || `pramaan_audit_export_${safeShortId}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(blobUrl);
+}
+
 
 export async function uploadAsset(
   file: File,
@@ -254,3 +324,13 @@ export function explainFindingWithCopilot(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Global Search
+// ---------------------------------------------------------------------------
+
+export function searchAll(query: string, limit: number = 10): Promise<GlobalSearchResponse> {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  params.set('limit', String(limit));
+  return apiFetch<GlobalSearchResponse>(`/api/v1/search?${params.toString()}`);
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowRight, 
   X, 
@@ -10,9 +10,11 @@ import {
   ChevronDown, 
   ChevronUp, 
   Loader2, 
-  AlertCircle 
+  AlertCircle,
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
-import { createAssessment, getCapabilities } from '../api/client';
+import { createAssessment, getCapabilities, getDemos } from '../api/client';
 import type { 
   CapabilitiesResponse, 
   AssessmentResultSchema, 
@@ -105,6 +107,9 @@ function ModeToggle({ mode, onChange }: { mode: 'upload' | 'local'; onChange: (m
 
 export function NewAssessment() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialMode = searchParams.get('mode') === 'demo' || searchParams.get('preset') ? 'demo' : 'custom';
+  const [entryMode, setEntryMode] = useState<'custom' | 'demo'>(initialMode);
   const [stage, setStage] = useState<Stage>('form');
   const [title, setTitle] = useState('');
 
@@ -150,7 +155,37 @@ export function NewAssessment() {
 
   useEffect(() => {
     getCapabilities().then(setCaps).catch(() => {});
+    const presetParam = searchParams.get('preset');
+    if (presetParam) {
+      getDemos().then((res) => {
+        const match = res.demos.find((d) => d.id === presetParam);
+        if (match) {
+          handleSelectPreset(match);
+          setEntryMode('demo');
+        }
+      }).catch(() => {});
+    }
   }, []);
+
+  function handleClearPreset() {
+    setSelectedPresetId(null);
+    setTitle('');
+    setModelMode('upload');
+    setModelPath('');
+    setUploadedModel(null);
+    setRefModelMode('local');
+    setRefModelPath('');
+    setUploadedRefModel(null);
+    setDatasetMode('upload');
+    setDatasetPath('');
+    setUploadedDataset(null);
+    setProvenanceJsonText('');
+    setProvenancePublicKeyHex('');
+    setActualInputHex('');
+    setActualOutputHex('');
+    setActualModelSha('');
+    setErrors([]);
+  }
 
   function handleSelectPreset(preset: DemoPresetSchema) {
     setSelectedPresetId(preset.id);
@@ -224,8 +259,8 @@ export function NewAssessment() {
     return e;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     const errs = validate();
     if (errs.length) {
       setErrors(errs);
@@ -353,8 +388,13 @@ export function NewAssessment() {
 
           <button
             type="button"
-            onClick={() => setStage('form')}
-            className="px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-[var(--accent-2)] transition-colors"
+            onClick={() => {
+              setStage('form');
+              setTimeout(() => {
+                document.getElementById('assessment-title')?.focus();
+              }, 50);
+            }}
+            className="px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-[var(--accent-2)] transition-colors focus-visible:ring-2 focus-visible:ring-accent focus:outline-none"
           >
             Review & Edit Inputs
           </button>
@@ -376,11 +416,111 @@ export function NewAssessment() {
         </p>
       </div>
 
-      {/* ── SIH Judge Fast Evaluation Presets ── */}
-      <DemoPresets
-        onSelectPreset={handleSelectPreset}
-        selectedPresetId={selectedPresetId}
-      />
+      {/* ── Mode Switcher Tabs ── */}
+      <div className="flex items-center justify-between border-b border-[var(--border)] pb-4 gap-4 flex-wrap">
+        <div className="flex items-center gap-2 p-1 rounded-xl bg-surface-2 border border-[var(--border)]">
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('custom');
+              const p = new URLSearchParams(searchParams);
+              p.delete('mode');
+              p.delete('preset');
+              setSearchParams(p);
+            }}
+            className={cn(
+              'px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 select-none flex items-center gap-2',
+              entryMode === 'custom'
+                ? 'bg-surface text-1 shadow-sm border border-[var(--border)]'
+                : 'text-3 hover:text-1'
+            )}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Custom Assessment</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('demo');
+              const p = new URLSearchParams(searchParams);
+              p.set('mode', 'demo');
+              setSearchParams(p);
+            }}
+            className={cn(
+              'px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-150 select-none flex items-center gap-2',
+              entryMode === 'demo'
+                ? 'bg-accent text-white shadow-sm'
+                : 'text-3 hover:text-1'
+            )}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Demo Mode (Corpus Scenarios)</span>
+            <span className={cn(
+              'px-1.5 py-0.2 rounded font-mono text-[9px] font-bold uppercase',
+              entryMode === 'demo' ? 'bg-white/20 text-white' : 'bg-surface text-accent border border-accent/30'
+            )}>
+              5 PRESETS
+            </span>
+          </button>
+        </div>
+
+        {entryMode === 'demo' ? (
+          <div className="text-xs text-3 font-mono flex items-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+            <span>OFFLINE DETERMINISTIC VERIFICATION</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('demo');
+              const p = new URLSearchParams(searchParams);
+              p.set('mode', 'demo');
+              setSearchParams(p);
+            }}
+            className="text-xs text-accent hover:underline flex items-center gap-1 font-medium"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Switch to Demo Mode for 1-Click Jury Scenarios</span>
+          </button>
+        )}
+      </div>
+
+      {/* ── Demo Mode Presets Suite OR Custom Mode Teaser ── */}
+      {entryMode === 'demo' ? (
+        <DemoPresets
+          onSelectPreset={handleSelectPreset}
+          selectedPresetId={selectedPresetId}
+          onExecute={() => handleSubmit()}
+          onClearPreset={handleClearPreset}
+        />
+      ) : (
+        <div className="card p-4 border border-[var(--border)] bg-surface-2/40 rounded-xl flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-[var(--accent-bg)] text-accent flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-1">Looking for reproducible evaluation scenarios?</p>
+              <p className="text-[11px] text-3">Explore 5 pre-configured offline corpus presets with 1-click execution.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('demo');
+              const p = new URLSearchParams(searchParams);
+              p.set('mode', 'demo');
+              setSearchParams(p);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-[var(--border)] text-xs font-semibold text-1 hover:border-accent/40 transition-colors shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-accent" />
+            <span>Switch to Demo Mode</span>
+          </button>
+        </div>
+      )}
 
       {/* Errors Banner */}
       {errors.length > 0 && (
@@ -675,7 +815,7 @@ export function NewAssessment() {
             <div className="pt-2 flex items-center justify-end gap-4">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-accent text-white text-xs sm:text-sm font-semibold hover:bg-[var(--accent-2)] transition-all shadow-sm active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-accent text-white text-xs sm:text-sm font-semibold hover:bg-[var(--accent-2)] transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <span>Run Assessment</span>
                 <ArrowRight className="w-4 h-4" />

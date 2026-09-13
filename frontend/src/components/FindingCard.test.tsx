@@ -35,7 +35,7 @@ describe('FindingCard', () => {
   it('expands to show detailed fields on click', async () => {
     const user = userEvent.setup();
     render(<FindingCard finding={MOCK_FINDING} />);
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /Near-duplicate/i });
     await user.click(button);
     expect(screen.getByText('near_duplicate')).toBeDefined();
     expect(screen.getByText('DI-01')).toBeDefined();
@@ -44,7 +44,7 @@ describe('FindingCard', () => {
   it('shows recommended disposition when expanded', async () => {
     const user = userEvent.setup();
     render(<FindingCard finding={MOCK_FINDING} />);
-    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByRole('button', { name: /Near-duplicate/i }));
     expect(screen.getByText('Review and de-duplicate the affected images.')).toBeDefined();
   });
 });

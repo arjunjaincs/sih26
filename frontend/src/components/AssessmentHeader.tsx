@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Clock, Copy, Check } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { ReportDownloadButton } from './ReportDownloadButton';
+import { ExportJsonButton } from './ExportJsonButton';
 import { MetricTriad } from './MetricTriad';
 import { formatDatetime, formatDuration } from '../lib/format';
 
@@ -105,9 +106,10 @@ export function AssessmentHeader({
           </div>
         </div>
 
-        {/* Action button: PDF report */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Action buttons: PDF report & JSON export */}
+        <div className="flex items-center gap-2.5 flex-shrink-0 flex-wrap">
           <ReportDownloadButton assessmentId={assessmentId} />
+          <ExportJsonButton assessmentId={assessmentId} variant="outline" />
         </div>
       </div>
 

@@ -24,6 +24,7 @@ AssessmentService.run_assessment() and returns the result.
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 import uuid
@@ -34,7 +35,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from backend.api.config import settings
-from backend.api.deps import DbDep, ServiceDep, UploadRepoDep
+from backend.api.deps import DbDep, ServiceDep, UploadRepoDep, BlobStoreDep
 from backend.api.errors import (
     AssessmentNotFound,
     InvalidAssetPath,
@@ -49,6 +50,8 @@ from backend.api.schemas import (
     AuditResponse,
     CoverageGapSchema,
     DetectorRunSchema,
+    EvidenceImagePreview,
+    EvidencePreviewResponse,
     EvidenceResponse,
     EvidenceSchema,
     FindingSchema,
@@ -64,10 +67,12 @@ from backend.infra.db import (
     AssetRepository,
     AuditPayloadRepository,
     AuditRepository,
+    DatasetRepository,
     DetectorResultRepository,
     EvidenceRepository,
     FindingRepository,
     ProvenanceRepository,
+    SampleRepository,
 )
 from backend.infra.ingestion import validate_absolute_path
 from backend.reporting import (
@@ -561,6 +566,486 @@ def get_evidence(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/evidence/{evidence_id}/preview
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/evidence/{evidence_id}/preview",
+    response_model=EvidencePreviewResponse,
+    summary="Get safe preview metadata for an evidence record",
+)
+def get_evidence_preview(
+    assessment_id: str,
+    evidence_id: str,
+    conn: DbDep,
+    blob_store: BlobStoreDep,
+) -> EvidencePreviewResponse:
+    """
+    Return structured or image preview metadata for an evidence record.
+    Security: Strictly scoped to the assessment and evidence record.
+    Does not expose absolute server filesystem paths.
+    """
+    if AssessmentRepository(conn).get(assessment_id) is None:
+        raise AssessmentNotFound(assessment_id)
+
+    ev_repo = EvidenceRepository(conn)
+    evidence = ev_repo.get(evidence_id)
+    if evidence is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "evidence_not_found", "message": f"Evidence {evidence_id!r} not found"},
+        )
+
+    finding = FindingRepository(conn).get(evidence.finding_id)
+    if finding is None or finding.assessment_id != assessment_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "evidence_not_found", "message": f"Evidence {evidence_id!r} does not belong to assessment {assessment_id!r}"},
+        )
+
+    data = evidence.data or {}
+    images: list[EvidenceImagePreview] = []
+    dataset_repo = DatasetRepository(conn)
+    sample_repo = SampleRepository(conn)
+    datasets = dataset_repo.list_by_assessment(assessment_id)
+    dataset_map = {d.dataset_id: d for d in datasets}
+
+    def _try_resolve_sample(sample: Any, caption: str | None = None) -> EvidenceImagePreview | None:
+        ds = dataset_map.get(sample.dataset_id)
+        if not ds or not ds.source_path:
+            return None
+        ds_root = Path(ds.source_path).resolve()
+        if ds_root.is_file():
+            ds_root = ds_root.parent
+        target = (ds_root / sample.file_name).resolve()
+        try:
+            target.relative_to(ds_root)
+        except ValueError:
+            return None  # Path traversal attempt rejected
+        if not target.is_file():
+            return None
+        file_size = target.stat().st_size
+        if file_size > 10 * 1024 * 1024:
+            return None  # Oversized (>10MB)
+        preview_url = f"/api/v1/assessments/{assessment_id}/evidence/{evidence_id}/samples/{sample.sample_id}/preview-file"
+        return EvidenceImagePreview(
+            sample_id=sample.sample_id,
+            file_name=sample.file_name,
+            preview_url=preview_url,
+            width=sample.width,
+            height=sample.height,
+            size_bytes=sample.file_size_bytes or file_size,
+            sha256=sample.sha256,
+            caption=caption or f"Sample: {sample.file_name}",
+        )
+
+    # 1. Sample ID / File Name lookups from evidence.data
+    # Check DI-01 duplicate cluster
+    if "sample_ids" in data and isinstance(data["sample_ids"], list):
+        for sid in data["sample_ids"][:8]:
+            s = sample_repo.get(str(sid))
+            if s:
+                img_prev = _try_resolve_sample(s, caption=f"Cluster duplicate ({s.file_name})")
+                if img_prev:
+                    images.append(img_prev)
+
+    if not images and "file_names" in data and isinstance(data["file_names"], list):
+        for fn in data["file_names"][:8]:
+            for ds in datasets:
+                s = sample_repo.get_by_dataset_and_filename(ds.dataset_id, str(fn))
+                if s:
+                    img_prev = _try_resolve_sample(s, caption=f"Cluster duplicate ({s.file_name})")
+                    if img_prev:
+                        images.append(img_prev)
+                        break
+
+    # Check DI-03 affected_samples
+    if not images and "affected_samples" in data and isinstance(data["affected_samples"], list):
+        for item in data["affected_samples"][:8]:
+            if isinstance(item, dict):
+                sid = item.get("sample_id")
+                fn = item.get("file_name")
+                s = sample_repo.get(str(sid)) if sid else None
+                if not s and fn:
+                    for ds in datasets:
+                        s = sample_repo.get_by_dataset_and_filename(ds.dataset_id, str(fn))
+                        if s:
+                            break
+                if s:
+                    cap = f"Trigger anomaly in {data.get('trigger_location', 'patch')} ({s.file_name})"
+                    img_prev = _try_resolve_sample(s, caption=cap)
+                    if img_prev:
+                        images.append(img_prev)
+
+    # Check single sample_id (DI-02, etc.)
+    if not images and "sample_id" in data and isinstance(data["sample_id"], str):
+        s = sample_repo.get(data["sample_id"])
+        if s:
+            img_prev = _try_resolve_sample(s)
+            if img_prev:
+                images.append(img_prev)
+
+    if images:
+        p_type = "image_cluster" if len(images) > 1 else "image"
+        title = f"Perceptual Duplicate Cluster ({len(images)} images)" if "cluster" in evidence.evidence_type.value else f"Image Sample Preview ({len(images)} images)"
+        return EvidencePreviewResponse(
+            evidence_id=evidence_id,
+            assessment_id=assessment_id,
+            finding_id=finding.finding_id,
+            detector_id=evidence.detector_id,
+            evidence_type=evidence.evidence_type.value,
+            preview_type=p_type,
+            title=title,
+            description=evidence.description,
+            artifact_sha256=evidence.artifact_sha256,
+            images=images,
+            structured_content=evidence.data,
+        )
+
+    # 2. Attached artifact in BlobStore
+    if evidence.artifact_sha256 and blob_store.exists(evidence.artifact_sha256):
+        blob_path = blob_store.blob_path(evidence.artifact_sha256)
+        size = blob_path.stat().st_size
+        if size > 10 * 1024 * 1024:
+            return EvidencePreviewResponse(
+                evidence_id=evidence_id,
+                assessment_id=assessment_id,
+                finding_id=finding.finding_id,
+                detector_id=evidence.detector_id,
+                evidence_type=evidence.evidence_type.value,
+                preview_type="unsupported",
+                size_bytes=size,
+                title="Artifact Exceeds Preview Size Limit",
+                description=evidence.description,
+                artifact_sha256=evidence.artifact_sha256,
+                unsupported_reason="Artifact size exceeds maximum 10MB preview threshold",
+                structured_content=evidence.data,
+                truncated=True,
+            )
+
+        with open(blob_path, "rb") as bf:
+            header = bf.read(512)
+
+        # Check image formats
+        img_mime = None
+        if header.startswith(b"\x89PNG\r\n\x1a\n"):
+            img_mime = "image/png"
+        elif header.startswith(b"\xff\xd8\xff"):
+            img_mime = "image/jpeg"
+        elif header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+            img_mime = "image/gif"
+        elif header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+            img_mime = "image/webp"
+        elif header.startswith(b"BM"):
+            img_mime = "image/bmp"
+
+        if img_mime:
+            preview_url = f"/api/v1/assessments/{assessment_id}/evidence/{evidence_id}/artifact-file"
+            return EvidencePreviewResponse(
+                evidence_id=evidence_id,
+                assessment_id=assessment_id,
+                finding_id=finding.finding_id,
+                detector_id=evidence.detector_id,
+                evidence_type=evidence.evidence_type.value,
+                preview_type="image",
+                mime_type=img_mime,
+                size_bytes=size,
+                title="Evidence Artifact Image",
+                description=evidence.description,
+                artifact_sha256=evidence.artifact_sha256,
+                images=[EvidenceImagePreview(
+                    file_name=f"artifact_{evidence.artifact_sha256[:8]}",
+                    preview_url=preview_url,
+                    size_bytes=size,
+                    sha256=evidence.artifact_sha256,
+                    caption="Attached evidence artifact",
+                )],
+                structured_content=evidence.data,
+            )
+
+        # Check text / JSON
+        try:
+            text = blob_path.read_text(encoding="utf-8")
+            truncated = len(text) > 65536
+            bounded_text = text[:65536]
+            try:
+                jdata = json.loads(bounded_text)
+                return EvidencePreviewResponse(
+                    evidence_id=evidence_id,
+                    assessment_id=assessment_id,
+                    finding_id=finding.finding_id,
+                    detector_id=evidence.detector_id,
+                    evidence_type=evidence.evidence_type.value,
+                    preview_type="json",
+                    mime_type="application/json",
+                    size_bytes=size,
+                    title="Evidence Artifact JSON",
+                    description=evidence.description,
+                    artifact_sha256=evidence.artifact_sha256,
+                    structured_content=jdata if isinstance(jdata, dict) else {"content": jdata},
+                    text_content=bounded_text,
+                    truncated=truncated,
+                )
+            except json.JSONDecodeError:
+                return EvidencePreviewResponse(
+                    evidence_id=evidence_id,
+                    assessment_id=assessment_id,
+                    finding_id=finding.finding_id,
+                    detector_id=evidence.detector_id,
+                    evidence_type=evidence.evidence_type.value,
+                    preview_type="structured_text",
+                    mime_type="text/plain",
+                    size_bytes=size,
+                    title="Evidence Artifact Text",
+                    description=evidence.description,
+                    artifact_sha256=evidence.artifact_sha256,
+                    text_content=bounded_text,
+                    truncated=truncated,
+                )
+        except UnicodeDecodeError:
+            return EvidencePreviewResponse(
+                evidence_id=evidence_id,
+                assessment_id=assessment_id,
+                finding_id=finding.finding_id,
+                detector_id=evidence.detector_id,
+                evidence_type=evidence.evidence_type.value,
+                preview_type="unsupported",
+                mime_type="application/octet-stream",
+                size_bytes=size,
+                title="Binary Evidence Artifact",
+                description=evidence.description,
+                artifact_sha256=evidence.artifact_sha256,
+                unsupported_reason="Binary model weights or serialized tensor artifact (.onnx / .pt) cannot be previewed inline for security and memory safety. Inspect layer structure below.",
+                structured_content=evidence.data,
+            )
+
+    # 3. Structured telemetry preview (default)
+    return EvidencePreviewResponse(
+        evidence_id=evidence_id,
+        assessment_id=assessment_id,
+        finding_id=finding.finding_id,
+        detector_id=evidence.detector_id,
+        evidence_type=evidence.evidence_type.value,
+        preview_type="structured",
+        mime_type="application/json",
+        title=f"{evidence.evidence_type.value.replace('_', ' ').title()} Telemetry Preview",
+        description=evidence.description,
+        artifact_sha256=evidence.artifact_sha256,
+        structured_content=evidence.data,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/evidence/{evidence_id}/artifact-file
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/evidence/{evidence_id}/artifact-file",
+    summary="Stream safe previewable artifact file bytes",
+)
+def get_evidence_artifact_file(
+    assessment_id: str,
+    evidence_id: str,
+    conn: DbDep,
+    blob_store: BlobStoreDep,
+):
+    if AssessmentRepository(conn).get(assessment_id) is None:
+        raise AssessmentNotFound(assessment_id)
+
+    evidence = EvidenceRepository(conn).get(evidence_id)
+    if evidence is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "evidence_not_found", "message": f"Evidence {evidence_id!r} not found"},
+        )
+
+    finding = FindingRepository(conn).get(evidence.finding_id)
+    if finding is None or finding.assessment_id != assessment_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "evidence_not_found", "message": f"Evidence {evidence_id!r} does not belong to assessment {assessment_id!r}"},
+        )
+
+    if not evidence.artifact_sha256 or not blob_store.exists(evidence.artifact_sha256):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "artifact_not_found", "message": "Evidence artifact is not stored in blob repository"},
+        )
+
+    blob_path = blob_store.blob_path(evidence.artifact_sha256)
+    file_size = blob_path.stat().st_size
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail={"error": "file_too_large", "message": "Artifact exceeds maximum preview limit (10MB)"},
+        )
+
+    with open(blob_path, "rb") as f:
+        header = f.read(512)
+
+    media_type = None
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        media_type = "image/png"
+    elif header.startswith(b"\xff\xd8\xff"):
+        media_type = "image/jpeg"
+    elif header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+        media_type = "image/gif"
+    elif header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+        media_type = "image/webp"
+    elif header.startswith(b"BM"):
+        media_type = "image/bmp"
+    else:
+        try:
+            blob_path.read_text(encoding="utf-8")
+            media_type = "text/plain; charset=utf-8"
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error": "unsupported_preview_format", "message": "Binary artifact cannot be streamed as preview"},
+            )
+
+    return Response(
+        content=blob_path.read_bytes(),
+        media_type=media_type,
+        headers={
+            "Content-Security-Policy": "default-src 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, max-age=3600",
+            "Content-Disposition": f'inline; filename="artifact_{evidence.artifact_sha256[:8]}"',
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/evidence/{evidence_id}/samples/{sample_id}/preview-file
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/evidence/{evidence_id}/samples/{sample_id}/preview-file",
+    summary="Stream safe previewable sample image bytes",
+)
+def get_evidence_sample_file(
+    assessment_id: str,
+    evidence_id: str,
+    sample_id: str,
+    conn: DbDep,
+):
+    if AssessmentRepository(conn).get(assessment_id) is None:
+        raise AssessmentNotFound(assessment_id)
+
+    evidence = EvidenceRepository(conn).get(evidence_id)
+    if evidence is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "evidence_not_found", "message": f"Evidence {evidence_id!r} not found"},
+        )
+
+    finding = FindingRepository(conn).get(evidence.finding_id)
+    if finding is None or finding.assessment_id != assessment_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "evidence_not_found", "message": f"Evidence {evidence_id!r} does not belong to assessment {assessment_id!r}"},
+        )
+
+    sample = SampleRepository(conn).get(sample_id)
+    if sample is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "sample_not_found", "message": f"Sample {sample_id!r} not found"},
+        )
+
+    # Verify sample is referenced in evidence.data
+    data = evidence.data or {}
+    ref_ids = set()
+    ref_files = set()
+    if isinstance(data.get("sample_ids"), list):
+        ref_ids.update(str(x) for x in data["sample_ids"])
+    if isinstance(data.get("file_names"), list):
+        ref_files.update(str(x) for x in data["file_names"])
+    if isinstance(data.get("affected_samples"), list):
+        for s_item in data["affected_samples"]:
+            if isinstance(s_item, dict):
+                if s_item.get("sample_id"):
+                    ref_ids.add(str(s_item["sample_id"]))
+                if s_item.get("file_name"):
+                    ref_files.add(str(s_item["file_name"]))
+    if isinstance(data.get("sample_id"), str):
+        ref_ids.add(data["sample_id"])
+
+    if sample.sample_id not in ref_ids and sample.file_name not in ref_files:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "sample_not_in_evidence", "message": f"Sample {sample_id!r} is not referenced in evidence {evidence_id!r}"},
+        )
+
+    dataset = DatasetRepository(conn).get(sample.dataset_id)
+    if dataset is None or dataset.assessment_id != assessment_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "dataset_not_found", "message": "Dataset not found or does not belong to assessment"},
+        )
+
+    # Strict containment check
+    ds_root = Path(dataset.source_path).resolve()
+    if ds_root.is_file():
+        ds_root = ds_root.parent
+    target_path = (ds_root / sample.file_name).resolve()
+
+    try:
+        target_path.relative_to(ds_root)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "path_traversal", "message": "Access denied: file path escapes dataset root directory"},
+        )
+
+    if not target_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "file_not_found", "message": "Sample file not found on disk"},
+        )
+
+    file_size = target_path.stat().st_size
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail={"error": "file_too_large", "message": "Sample image exceeds maximum preview limit (10MB)"},
+        )
+
+    with open(target_path, "rb") as f:
+        header = f.read(512)
+
+    media_type = None
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        media_type = "image/png"
+    elif header.startswith(b"\xff\xd8\xff"):
+        media_type = "image/jpeg"
+    elif header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+        media_type = "image/gif"
+    elif header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+        media_type = "image/webp"
+    elif header.startswith(b"BM"):
+        media_type = "image/bmp"
+
+    if not media_type:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": "unsupported_preview_format", "message": "File is not a supported previewable image format"},
+        )
+
+    return Response(
+        content=target_path.read_bytes(),
+        media_type=media_type,
+        headers={
+            "Content-Security-Policy": "default-src 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, max-age=3600",
+            "Content-Disposition": f'inline; filename="{sample.file_name}"',
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/assessments/{assessment_id}/audit
 # ---------------------------------------------------------------------------
 
@@ -621,6 +1106,49 @@ def get_audit(
             )
             for e in events
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/audit/export
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/audit/export",
+    summary="Export verified audit trail as structured JSON",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/json": {}},
+            "description": "Returns the machine-readable verified audit trail export package.",
+        },
+        404: {"description": "Assessment not found."},
+    },
+)
+def export_audit_json_endpoint(
+    assessment_id: str,
+    conn: DbDep,
+) -> Response:
+    """
+    Export the cryptographically verified audit trail for an assessment as structured JSON.
+    Includes genesis hash, sequential events, hashes, payload digests, pre-signature hashes,
+    Ed25519 signature statuses, and ChainVerifier outcome.
+    Ensures zero leakage of server filesystem paths, private keys, or credentials.
+    """
+    from backend.reporting.exporter import export_audit_trail_json
+
+    export_dict = export_audit_trail_json(conn, assessment_id)
+    json_bytes = json.dumps(export_dict, indent=2, ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+    safe_short_id = "".join(c for c in assessment_id[:8] if c.isalnum() or c in "-_")
+    filename = f"pramaan_audit_export_{safe_short_id or 'assessment'}.json"
+    return Response(
+        content=json_bytes,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Type": "application/json; charset=utf-8",
+        },
     )
 
 
@@ -759,6 +1287,48 @@ def get_assessment_report(
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Content-Type": "application/pdf",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/assessments/{assessment_id}/export/json
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/assessments/{assessment_id}/export/json",
+    summary="Export machine-readable structured JSON assurance package",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/json": {}},
+            "description": "Returns the machine-readable JSON assurance export package.",
+        },
+        404: {"description": "Assessment not found."},
+    },
+)
+def export_assessment_json_endpoint(
+    assessment_id: str,
+    conn: DbDep,
+) -> Response:
+    """
+    Export a machine-readable JSON assurance package for the specified assessment.
+    Contains metadata, assets, findings, evidence references, provenance, and audit trail.
+    Ensures zero leakage of server filesystem paths, private keys, API keys, or raw artifact bytes.
+    """
+    from backend.reporting.exporter import export_assessment_json
+
+    export_dict = export_assessment_json(conn, assessment_id)
+    json_bytes = json.dumps(export_dict, indent=2, ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+    safe_short_id = "".join(c for c in assessment_id[:8] if c.isalnum() or c in "-_")
+    filename = f"pramaan_assurance_export_{safe_short_id or 'assessment'}.json"
+    return Response(
+        content=json_bytes,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Type": "application/json; charset=utf-8",
         },
     )
 

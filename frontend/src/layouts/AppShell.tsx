@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Moon, Sun, ShieldCheck } from 'lucide-react';
+import { Moon, Sun, ShieldCheck, Search } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { getHealth, NetworkError } from '../api/client';
+import { GlobalSearchModal } from '../components/GlobalSearchModal';
 import { cn } from '../lib/cn';
 
 const NAV_LINKS = [
@@ -31,6 +32,7 @@ function PramaanShield({ className }: { className?: string }) {
 export function AppShell() {
   const { theme, toggle } = useTheme();
   const [status, setStatus] = useState<BackendStatus>('checking');
+  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -48,8 +50,53 @@ export function AppShell() {
     return () => { mounted = false; clearInterval(id); };
   }, []);
 
+  // Global keyboard shortcuts (Ctrl+K and / when outside text inputs)
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      // Ctrl/Cmd + K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+        return;
+      }
+
+      // '/' shortcut to open search if user is not currently in an input/textarea
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const target = e.target as HTMLElement | null;
+        if (target && target.tagName) {
+          const tag = target.tagName.toLowerCase();
+          if (tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable) {
+            return; // Preserve browser-native typing in inputs
+          }
+        }
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Route change focus management: scroll top and focus main content landmark to avoid focus loss
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const mainEl = document.getElementById('main-content');
+    if (mainEl) {
+      mainEl.setAttribute('tabindex', '-1');
+      mainEl.focus({ preventScroll: true });
+    }
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-bg flex flex-col">
+      {/* Accessible skip link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] px-3 py-1.5 rounded-lg bg-accent text-white font-semibold text-xs shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent"
+      >
+        Skip to main content
+      </a>
       {/* Top navigation */}
       <header className="fixed top-0 inset-x-0 z-50 h-12 border-b border-[var(--border)] bg-surface nav-blur">
         <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between gap-8">
@@ -68,10 +115,10 @@ export function AppShell() {
                 end={link.end}
                 className={({ isActive }) =>
                   cn(
-                    'px-3 py-1.5 rounded text-sm transition-colors duration-150',
+                    'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150',
                     isActive
-                      ? 'text-accent font-medium'
-                      : 'text-2 hover:text-1',
+                      ? 'bg-surface-2/80 text-accent font-semibold border border-[var(--border)] shadow-sm'
+                      : 'text-2 hover:text-1 hover:bg-surface-2/50 border border-transparent',
                   )
                 }
               >
@@ -81,7 +128,22 @@ export function AppShell() {
           </nav>
 
           {/* Right controls */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
+            {/* Global Search Trigger */}
+            <button
+              type="button"
+              id="global-search-btn"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Open global search (Ctrl+K)"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-2/80 hover:bg-surface-2 border border-[var(--border)] text-xs text-3 hover:text-1 transition-colors group"
+            >
+              <Search className="w-3.5 h-3.5 text-3 group-hover:text-accent transition-colors" />
+              <span className="hidden md:inline">Search PRAMAAN…</span>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 font-mono text-[10px] text-3 px-1.5 py-0.2 rounded bg-surface border border-[var(--border)]">
+                Ctrl K
+              </kbd>
+            </button>
+
             {/* Backend status */}
             <div className="flex items-center gap-1.5" title={
               status === 'ok' ? 'Backend connected' :
@@ -138,6 +200,9 @@ export function AppShell() {
           <Outlet />
         </motion.div>
       </main>
+
+      {/* Global Search Dialog */}
+      <GlobalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

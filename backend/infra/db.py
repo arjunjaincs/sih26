@@ -230,6 +230,14 @@ CREATE INDEX IF NOT EXISTS idx_uploads_created_at
 # Connection factory
 # ---------------------------------------------------------------------------
 
+# Process-level set of db_path strings that have already been initialized.
+# Prevents re-running DDL (CREATE TABLE IF NOT EXISTS, ALTER TABLE, etc.)
+# on every API request once the schema is in place.
+# Thread-safety: adding to a Python set is GIL-protected; worst case two
+# concurrent first-opens both run DDL (idempotent) then both add to the set.
+_initialized_dbs: set[str] = set()
+
+
 def open_db(db_path: Path) -> sqlite3.Connection:
     """
     Open (or create) the SQLite database at *db_path*.
@@ -237,16 +245,27 @@ def open_db(db_path: Path) -> sqlite3.Connection:
     - Enables WAL journal mode
     - Enables foreign key enforcement
     - Sets row_factory to sqlite3.Row for name-based column access
-    - Creates tables and indexes if they do not exist
+    - Creates tables and indexes if they do not exist (first open only)
+
+    Schema initialization runs once per process per unique db_path *that
+    already existed on disk*.  If the file is freshly created (or was deleted
+    and recreated), DDL always runs — this handles test teardown/recreation
+    correctly.  For long-running server processes, subsequent opens of the
+    same existing file skip DDL entirely.
     """
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    # Check BEFORE sqlite3.connect, which creates the file if absent.
+    existed_before = db_path.exists()
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.executescript(_SCHEMA)
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(samples)").fetchall()}
-    if "contributor" not in cols:
-        conn.execute("ALTER TABLE samples ADD COLUMN contributor TEXT")
-    conn.commit()
+    key = str(db_path.resolve())
+    if not existed_before or key not in _initialized_dbs:
+        conn.executescript(_SCHEMA)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(samples)").fetchall()}
+        if "contributor" not in cols:
+            conn.execute("ALTER TABLE samples ADD COLUMN contributor TEXT")
+        conn.commit()
+        _initialized_dbs.add(key)
     return conn
 
 
@@ -453,6 +472,12 @@ class DatasetRepository:
             return None
         return self._row_to_dataset(row)
 
+    def list_by_assessment(self, assessment_id: str) -> list[Dataset]:
+        rows = self._conn.execute(
+            "SELECT * FROM datasets WHERE assessment_id=?", (assessment_id,)
+        ).fetchall()
+        return [self._row_to_dataset(r) for r in rows]
+
     @staticmethod
     def _row_to_dataset(row: sqlite3.Row) -> Dataset:
         return Dataset(
@@ -526,6 +551,23 @@ class SampleRepository:
             "SELECT COUNT(*) AS n FROM samples WHERE dataset_id=?", (dataset_id,)
         ).fetchone()
         return row["n"] if row else 0
+
+    def get(self, sample_id: str) -> Sample | None:
+        row = self._conn.execute(
+            "SELECT * FROM samples WHERE sample_id=?", (sample_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_sample(row)
+
+    def get_by_dataset_and_filename(self, dataset_id: str, file_name: str) -> Sample | None:
+        row = self._conn.execute(
+            "SELECT * FROM samples WHERE dataset_id=? AND file_name=?",
+            (dataset_id, file_name),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_sample(row)
 
     @staticmethod
     def _row_to_sample(row: sqlite3.Row) -> Sample:
@@ -638,13 +680,17 @@ class FindingRepository:
     @staticmethod
     def _row_to_finding(row: sqlite3.Row) -> Finding:
         from datetime import datetime
+        raw_cat = row["category"]
+        cat = FindingCategory(raw_cat.lower()) if isinstance(raw_cat, str) else FindingCategory(raw_cat)
+        raw_sev = row["severity"]
+        sev = Severity(raw_sev.lower()) if isinstance(raw_sev, str) else Severity(raw_sev)
         return Finding(
             finding_id=row["finding_id"],
             assessment_id=row["assessment_id"],
             asset_id=row["asset_id"],
-            category=FindingCategory(row["category"]),
+            category=cat,
             subcategory=row["subcategory"],
-            severity=Severity(row["severity"]),
+            severity=sev,
             title=row["title"],
             description=row["description"],
             detection_method=row["detection_method"],
@@ -689,13 +735,23 @@ class EvidenceRepository:
         ).fetchall()
         return [self._row_to_evidence(r) for r in rows]
 
+    def get(self, evidence_id: str) -> Evidence | None:
+        row = self._conn.execute(
+            "SELECT * FROM evidence WHERE evidence_id=?", (evidence_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_evidence(row)
+
     @staticmethod
     def _row_to_evidence(row: sqlite3.Row) -> Evidence:
+        raw_ev = row["evidence_type"]
+        ev_type = EvidenceType(raw_ev.lower()) if isinstance(raw_ev, str) else EvidenceType(raw_ev)
         return Evidence(
             evidence_id=row["evidence_id"],
             finding_id=row["finding_id"],
             detector_id=row["detector_id"],
-            evidence_type=EvidenceType(row["evidence_type"]),
+            evidence_type=ev_type,
             description=row["description"],
             data=json.loads(row["data_json"]),
             artifact_path=row["artifact_path"],
@@ -749,13 +805,15 @@ class DetectorResultRepository:
         def _dt(s: str | None) -> datetime | None:
             return datetime.fromisoformat(s) if s else None
 
+        raw_status = row["status"]
+        status = DetectorStatus(raw_status.lower()) if isinstance(raw_status, str) else DetectorStatus(raw_status)
         return DetectorResult(
             result_id=row["result_id"],
             assessment_id=row["assessment_id"],
             asset_id=row["asset_id"],
             detector_id=row["detector_id"],
             detector_version=row["detector_version"],
-            status=DetectorStatus(row["status"]),
+            status=status,
             error=row["error"],
             findings_count=row["findings_count"],
             evidence_count=row["evidence_count"],

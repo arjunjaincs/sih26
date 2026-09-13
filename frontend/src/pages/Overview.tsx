@@ -46,14 +46,10 @@ export function Overview() {
             </div>
 
             {/* Display headline */}
-            <div className="space-y-0.5">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-1 leading-[1.08]">
-                Trust AI
-              </h1>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08]">
-                with <span className="text-accent">Evidence</span>
-              </h1>
-            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.08]">
+              <span className="text-1 block">Trust AI</span>
+              <span className="block">with <span className="text-accent">Evidence</span></span>
+            </h1>
 
             {/* Description */}
             <p className="text-sm text-2 leading-relaxed max-w-md">

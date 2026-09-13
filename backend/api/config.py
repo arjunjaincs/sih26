@@ -45,6 +45,10 @@ def _get_db_path() -> Path:
     raw = os.environ.get("PRAMAAN_DB_PATH", "")
     if raw:
         return Path(raw)
+    if data_dir_env := os.environ.get("PRAMAAN_DATA_DIR"):
+        data_dir = Path(data_dir_env).resolve()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return data_dir / "pramaan.db"
     # Default: <repo-root>/data/pramaan.db
     # This file is at backend/api/config.py — resolve two levels up.
     repo_root = Path(__file__).parent.parent.parent

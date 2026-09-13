@@ -7,6 +7,7 @@ GET /api/v1/demos -- list authentic offline demo presets backed by real corpus a
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,11 @@ from backend.api.schemas import DemoListResponse, DemoPresetSchema
 router = APIRouter(prefix="/api/v1", tags=["demos"])
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-_CORPUS_DIR = _PROJECT_ROOT / "data" / "corpus"
+_CORPUS_DIR = (
+    Path(os.environ["PRAMAAN_CORPUS_DIR"]).resolve()
+    if "PRAMAAN_CORPUS_DIR" in os.environ
+    else (_PROJECT_ROOT / "data" / "corpus")
+)
 
 
 def _build_presets() -> list[DemoPresetSchema]:
@@ -40,6 +45,10 @@ def _build_presets() -> list[DemoPresetSchema]:
                 expected_risk="NONE",
                 expected_confidence="HIGH",
                 detectors_targeted=["MI-01", "MI-02", "MI-04"],
+                expected_layer="Model Integrity",
+                expected_finding_type="Clean baseline verification (0 defects / Risk: NONE)",
+                complexity="Level 1 · Reference Baseline",
+                is_deterministic_corpus=True,
                 payload={
                     "title": "Demo: Clean Reference Baseline",
                     "model_path": str(clean_model.resolve()),
@@ -63,6 +72,10 @@ def _build_presets() -> list[DemoPresetSchema]:
                 expected_risk="HIGH",
                 expected_confidence="HIGH",
                 detectors_targeted=["DI-01"],
+                expected_layer="Dataset Integrity",
+                expected_finding_type="Exact byte duplicates & DCT perceptual near-duplicate clusters",
+                complexity="Level 2 · Perceptual Clustering",
+                is_deterministic_corpus=True,
                 payload={
                     "title": "Demo: Dataset Duplicate Analysis",
                     "dataset_path": str(dup_images.resolve()),
@@ -90,6 +103,10 @@ def _build_presets() -> list[DemoPresetSchema]:
                 expected_risk="HIGH",
                 expected_confidence="HIGH",
                 detectors_targeted=["MI-02", "MI-04"],
+                expected_layer="Model Integrity",
+                expected_finding_type="Non-finite weight corruption (NaN/Inf) & structural divergence",
+                complexity="Level 3 · Numerical Parameter Tampering",
+                is_deterministic_corpus=True,
                 payload={
                     "title": "Demo: Corrupted Model Weights",
                     "model_path": str(corrupt_model.resolve()),
@@ -113,6 +130,10 @@ def _build_presets() -> list[DemoPresetSchema]:
                 expected_risk="HIGH",
                 expected_confidence="HIGH",
                 detectors_targeted=["MI-01", "MI-02", "MI-05"],
+                expected_layer="Model Integrity",
+                expected_finding_type="Latent backdoor shortcut trigger & distribution anomaly",
+                complexity="Level 4 · Deep Forensic Search",
+                is_deterministic_corpus=True,
                 payload={
                     "title": "Demo: Trojan Trigger Search",
                     "model_path": str(trojan_model.resolve()),
@@ -155,6 +176,10 @@ def _build_presets() -> list[DemoPresetSchema]:
                     expected_risk="NONE",
                     expected_confidence="HIGH",
                     detectors_targeted=["PI-01"],
+                    expected_layer="Inference Provenance",
+                    expected_finding_type="Ed25519 signature attestation & input/output byte hash bindings",
+                    complexity="Level 3 · Cryptographic Attestation",
+                    is_deterministic_corpus=True,
                     payload={
                         "title": "Demo: Signed Inference Provenance",
                         "provenance_manifest": manifest_data,

@@ -223,6 +223,16 @@ vi.mock('./api/client', () => ({
   listAssessments: vi.fn(() => Promise.resolve({ total: 1, assessments: [MOCK_SUMMARY] })),
   getFindings: vi.fn(() => Promise.resolve(MOCK_FINDINGS)),
   getEvidence: vi.fn(() => Promise.resolve(MOCK_EVIDENCE)),
+  getEvidencePreview: vi.fn((asmtId: string, evId: string) => Promise.resolve({
+    evidence_id: evId,
+    assessment_id: asmtId,
+    finding_id: 'fnd_001',
+    detector_id: 'MI-01',
+    evidence_type: 'structural_ast',
+    preview_type: 'structured',
+    title: 'AST Structural Diff Preview',
+    structured_content: { diff: 'none' },
+  })),
   getAudit: vi.fn(() => Promise.resolve(MOCK_AUDIT)),
   createAssessment: vi.fn(() => Promise.resolve(MOCK_RESULT)),
   uploadAsset: vi.fn(() => Promise.resolve({
@@ -246,6 +256,8 @@ vi.mock('./api/client', () => ({
   })),
   downloadReport: vi.fn(() => Promise.resolve(new Blob())),
   getReportUrl: vi.fn((id: string) => `/api/v1/assessments/${id}/report`),
+  exportAssessmentJson: vi.fn(() => Promise.resolve()),
+  getExportJsonUrl: vi.fn((id: string) => `/api/v1/assessments/${id}/export/json`),
   verifyAuditChain: vi.fn(() => Promise.resolve({ chain_valid: true, events_verified: 5 })),
   NetworkError: class NetworkError extends Error { name = 'NetworkError'; },
 }));

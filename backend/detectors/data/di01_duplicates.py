@@ -173,7 +173,8 @@ def _hamming_distance(hex_a: str, hex_b: str) -> int:
         int_b = int(hex_b, 16)
     except ValueError:
         return -1
-    return bin(int_a ^ int_b).count("1")
+    return (int_a ^ int_b).bit_count()
+
 
 
 # ---------------------------------------------------------------------------
@@ -219,12 +220,19 @@ def _build_near_duplicate_groups(
     """
     Find near-duplicate clusters using pHash Hamming distance.
 
-    Algorithm: O(n²) pair comparison followed by union-find clustering.
-    Samples with missing pHash are silently excluded from near-duplicate
-    analysis (they are noted in the confidence qualifier).
-
+    Algorithm: O(N²) pairwise comparison with union-find clustering.
+    Samples with missing pHash are silently excluded.
     Exact duplicates (same SHA-256) are excluded — DI-01 already catches
     those separately and we avoid double-counting.
+
+    V1 Rationale: For demo-scale datasets (≤ 10,000 samples), O(N²) is
+    acceptable.  Key constant-factor optimisations are applied:
+      - All hex pHash strings are decoded to Python int exactly once, before
+        the inner loop (saves N² calls to int(hex, 16)).
+      - Per-pair distance uses int.bit_count() (Python 3.11+, C-level popcount)
+        instead of bin().count('1'), which is 3–5× faster.
+    This function is isolated so it can be replaced with a numpy-accelerated
+    or LSH implementation without touching the rest of the detector.
     """
     # Only analyze samples that have a pHash
     eligible = [s for s in samples if s.phash]
@@ -232,41 +240,59 @@ def _build_near_duplicate_groups(
     if len(eligible) < 2:
         return []
 
+    # Decode hex pHash to int once per sample (avoids repeated int() in inner loop)
+    int_hashes: list[int] = []
+    valid_eligible: list[Sample] = []
+    for s in eligible:
+        try:
+            int_hashes.append(int(s.phash, 16))  # type: ignore[arg-type]
+            valid_eligible.append(s)
+        except (ValueError, TypeError):
+            continue  # Skip samples with malformed pHash
+
+    N = len(valid_eligible)
+    if N < 2:
+        return []
+
     # Build adjacency: pairs within threshold (exclude exact SHA-256 duplicates)
     uf = _UnionFind()
     edge_max_dist: dict[tuple[str, str], int] = {}
 
-    for i in range(len(eligible)):
-        for j in range(i + 1, len(eligible)):
-            a, b = eligible[i], eligible[j]
+    for i in range(N):
+        ih_i = int_hashes[i]
+        s_i = valid_eligible[i]
+        for j in range(i + 1, N):
             # Skip byte-identical pairs — already handled by exact detection
-            if a.sha256 == b.sha256:
+            if s_i.sha256 == valid_eligible[j].sha256:
                 continue
-            dist = _hamming_distance(a.phash, b.phash)
-            if dist < 0:
-                continue
+            # int.bit_count() is a C-level popcount (Python 3.11+), ~3–5× faster
+            # than bin(x).count('1') because it avoids string allocation.
+            dist = (ih_i ^ int_hashes[j]).bit_count()
             if dist <= phash_threshold:
-                uf.union(a.sample_id, b.sample_id)
-                key = (min(a.sample_id, b.sample_id), max(a.sample_id, b.sample_id))
+                sid_i = s_i.sample_id
+                sid_j = valid_eligible[j].sample_id
+                uf.union(sid_i, sid_j)
+                key = (min(sid_i, sid_j), max(sid_i, sid_j))
                 edge_max_dist[key] = max(edge_max_dist.get(key, 0), dist)
 
     # Collect clusters
-    all_ids = [s.sample_id for s in eligible]
+    all_ids = [s.sample_id for s in valid_eligible]
     groups = uf.groups(all_ids)
-    sample_map = {s.sample_id: s for s in eligible}
+    sample_map = {s.sample_id: s for s in valid_eligible}
 
     clusters: list[_DuplicateCluster] = []
     for root, member_ids in groups.items():
         if len(member_ids) < 2:
             continue  # Singleton — not a near-duplicate cluster
 
-        # Compute the max Hamming distance seen among all edges in this cluster
+        # Max Hamming distance across all discovered edges in this cluster.
+        # Keys in edge_max_dist are always (min_sid, max_sid); normalise here
+        # to match, since union-find may return member_ids in arbitrary order.
         max_dist = 0
         for ii in range(len(member_ids)):
             for jj in range(ii + 1, len(member_ids)):
-                a_id = member_ids[ii]
-                b_id = member_ids[jj]
-                key = (min(a_id, b_id), max(a_id, b_id))
+                a, b = member_ids[ii], member_ids[jj]
+                key = (min(a, b), max(a, b))
                 if key in edge_max_dist:
                     max_dist = max(max_dist, edge_max_dist[key])
 
@@ -280,6 +306,7 @@ def _build_near_duplicate_groups(
         ))
 
     return clusters
+
 
 
 # ---------------------------------------------------------------------------
