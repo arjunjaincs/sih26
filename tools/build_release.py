@@ -15,7 +15,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RELEASE_DIR = REPO_ROOT / "release" / "PRAMAAN"
-PYTHON_BASE = Path(r"C:\Users\ss\AppData\Local\Programs\Python\Python314")
+PYTHON_BASE = Path(os.environ.get("PYTHON_BASE", sys.base_prefix))
 VENV_DIR = REPO_ROOT / ".venv"
 SITE_PACKAGES_SRC = VENV_DIR / "Lib" / "site-packages"
 ELECTRON_DIST = REPO_ROOT / "node_modules" / "electron" / "dist"
@@ -207,10 +207,14 @@ DISTRIBUTABLE APPLICATION INSTRUCTIONS FOR SIH JUDGES & EVALUATORS
    - NO administrative privileges required.
 
 2. STRICT OFFLINE / AIR-GAP OPERATION
-   - PRAMAAN operates 100% offline with zero cloud or Internet dependencies.
+   - The core assurance workflow is designed to operate without Internet access
+     and was validated under controlled outbound-network blocking/browser interception
+     with zero external requests observed during the validation run.
    - Zero external requests, zero analytics, zero update checks.
    - All cryptographic verifications (Ed25519) and SHA-256 hash chains run locally.
    - AI Analyst Copilot is explicitly optional and disabled by default.
+   - NOTE: PRAMAAN is distributed as the complete application directory
+     (release/PRAMAAN or its extracted archive), containing its local runtime resources.
 
 3. EVALUATION WORKFLOW & DEMO PRESETS
    PRAMAAN includes 5 deterministic, authentic demo presets for instant evaluation:
@@ -221,24 +225,24 @@ DISTRIBUTABLE APPLICATION INSTRUCTIONS FOR SIH JUDGES & EVALUATORS
       
    2. Dataset Duplicates & Collisions:
       - Detects exact byte duplicates and DCT perceptual near-duplicate clusters.
-      - Risk: HIGH, Detectors: DI-01.
+      - Risk: MEDIUM, Detectors: DI-01.
       
    3. Parameter Tampering (NaN/Inf):
       - Discovers parameter corruption, NaN weights, and activation instability.
-      - Risk: CRITICAL, Detectors: MI-02, MI-03.
+      - Risk: HIGH, Detectors: MI-02, MI-03.
       
    4. Trojan Shortcut Convergence:
       - Exposes backdoor trigger anomaly and activation distribution shift.
-      - Risk: CRITICAL, Detectors: MI-05, DI-03.
+      - Risk: HIGH, Detectors: MI-05, DI-03.
       
    5. Cryptographic Inference Provenance:
       - Verifies tamper-evident Ed25519 digital signature and input digest attestation.
-      - Status: VERIFIED, Risk: NONE.
+      - Status: VERIFIED, Nonce replay detected upon repeat submission.
 
 4. EXPORTS & REPORTS
    - Machine-Readable Structured JSON: Full assurance package with zero path leaks.
    - Cryptographic PDF Report: Multi-page executive summary with SHA-256 fingerprinting.
-   - Audit Trail Export: Verifiable append-only event ledger.
+   - Audit Trail Export: Verifiable append-only SHA-256 hash-linked event ledger.
    - Saved Reports and exports are stored locally in your user profile:
      %APPDATA%\\PRAMAAN\\data
 
