@@ -1,6 +1,16 @@
-# Python
+# =============================================================================
+# PRAMAAN v1 — Git Ignore Specification (Production Release Freeze)
+# =============================================================================
+
+# Local Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Python runtime & test caches
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
 .venv/
 venv/
@@ -9,42 +19,41 @@ env/
 .mypy_cache/
 .ruff_cache/
 
-# Node
+# Node & Frontend Build Outputs
 node_modules/
 dist/
 build/
 .vite/
+frontend/dist/
 
-# Environment
-.env
-.env.*
-!.env.example
+# Release Distribution Artifacts (~1.25 GB packaged runtime)
+release/
 
-# IDE
-.vscode/
-.idea/
+# Temporary / Scratch Workspaces & Logs
+scratch/
+logs/
+*.log
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Local runtime
+# Local Databases, WAL logs, & Runtime Cache
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
-
-# Generated evidence
+pramaan_data/
 evidence/
 reports/generated/
 uploads/
 
-# Models / datasets
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Large Binary Artifacts (Preserve official reproducible corpus)
 models/*.pt
 models/*.pth
 models/*.onnx
 /data/*
 !/data/corpus/
-
-# PRAMAAN runtime data
-pramaan_data/
-scratch/
