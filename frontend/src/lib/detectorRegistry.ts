@@ -431,31 +431,37 @@ export function normalizeDetectorCode(idOrCode: string): string {
   const trimmed = idOrCode.trim();
   const upper = trimmed.toUpperCase();
 
-  // Exact matches
+  // 1. Direct exact key match (e.g. 'DI-01', 'MI-05', 'PI-01', 'AT-01')
   if (DETECTOR_SPECS[upper]) return upper;
 
-  const lower = trimmed.toLowerCase();
-  if (lower.includes('di01') || lower.includes('di-01') || lower.includes('duplicates')) return 'DI-01';
-  if (lower.includes('di02') || lower.includes('di-02') || lower.includes('label')) return 'DI-02';
-  if (lower.includes('di03') || lower.includes('di-03') || lower.includes('trigger_anomaly')) return 'DI-03';
-  if (lower.includes('di04') || lower.includes('di-04') || lower.includes('distribution') || lower.includes('ood')) return 'DI-04';
-  if (lower.includes('di05') || lower.includes('di-05') || lower.includes('contributor')) return 'DI-05';
-
-  if (lower.includes('mi01') || lower.includes('mi-01') || lower.includes('fingerprint')) return 'MI-01';
-  if (lower.includes('mi02') || lower.includes('mi-02') || lower.includes('parameter')) return 'MI-02';
-  if (lower.includes('mi03') || lower.includes('mi-03') || lower.includes('activation')) return 'MI-03';
-  if (lower.includes('mi04') || lower.includes('mi-04') || lower.includes('reference')) return 'MI-04';
-  if (lower.includes('mi05') || lower.includes('mi-05') || lower.includes('trigger')) return 'MI-05';
-
-  if (lower.includes('pi01') || lower.includes('pi-01') || lower.includes('provenance')) return 'PI-01';
-  if (lower.includes('at01') || lower.includes('at-01') || lower.includes('audit')) return 'AT-01';
-
-  // Generic 2-letter 2-digit format (e.g. AB-01)
-  const match = trimmed.match(/([a-z]{2})[-_]?(\d{2})/i);
-  if (match) {
-    const candidate = `${match[1].toUpperCase()}-${match[2]}`;
+  // 2. Canonical pattern match anywhere in the string:
+  // e.g. "model.integrity.mi05_trigger_anomaly" -> "mi05" -> "MI-05"
+  // e.g. "data.integrity.di03_trigger_anomaly" -> "di03" -> "DI-03"
+  // e.g. "inference.provenance.pi01_integrity" -> "pi01" -> "PI-01"
+  // e.g. "di-01", "mi_02", "PI01", "at01"
+  const canonicalMatch = trimmed.match(/(?:^|[^a-z0-9])([a-z]{2})[-_]?(\d{2})(?:$|[^a-z0-9])/i) ||
+                         trimmed.match(/([a-z]{2})[-_]?(\d{2})/i);
+  if (canonicalMatch) {
+    const candidate = `${canonicalMatch[1].toUpperCase()}-${canonicalMatch[2]}`;
     if (DETECTOR_SPECS[candidate]) return candidate;
   }
+
+  // 3. Fallback to keyword matching (without collisions like trigger_anomaly)
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('di01') || lower.includes('duplicates')) return 'DI-01';
+  if (lower.includes('di02') || lower.includes('mislabelling') || lower.includes('label')) return 'DI-02';
+  if (lower.includes('di03') || lower.includes('spatial_pattern')) return 'DI-03';
+  if (lower.includes('di04') || lower.includes('feature_distribution') || lower.includes('ood')) return 'DI-04';
+  if (lower.includes('di05') || lower.includes('contributor_split') || lower.includes('contributor')) return 'DI-05';
+
+  if (lower.includes('mi01') || lower.includes('fingerprint')) return 'MI-01';
+  if (lower.includes('mi02') || lower.includes('parameter_integrity') || lower.includes('parameter')) return 'MI-02';
+  if (lower.includes('mi03') || lower.includes('activation_distribution') || lower.includes('activation')) return 'MI-03';
+  if (lower.includes('mi04') || lower.includes('reference_comparison') || lower.includes('reference')) return 'MI-04';
+  if (lower.includes('mi05') || lower.includes('trigger_convergence') || lower.includes('backdoor')) return 'MI-05';
+
+  if (lower.includes('pi01') || lower.includes('provenance')) return 'PI-01';
+  if (lower.includes('at01') || lower.includes('audit')) return 'AT-01';
 
   return upper;
 }

@@ -44,10 +44,11 @@ class TestDemoPresetsExtended:
         res = client.get("/api/v1/demos")
         assert res.status_code == 200
         data = res.json()
-        assert data["total"] == 5
+        assert data["total"] == 6
 
         preset_ids = [d["id"] for d in data["demos"]]
         expected_ids = [
+            "unified_forensic_suite",
             "clean_baseline",
             "duplicate_data",
             "corrupted_model",
@@ -68,7 +69,7 @@ class TestDemoPresetsExtended:
             assert len(p["detectors_targeted"]) > 0
 
             # Verified new metadata fields
-            assert p["expected_layer"] in ["Model Integrity", "Dataset Integrity", "Inference Provenance"]
+            assert p["expected_layer"] in ["Model Integrity", "Dataset Integrity", "Inference Provenance", "Multi-Layer Assurance"]
             assert isinstance(p["expected_finding_type"], str) and len(p["expected_finding_type"]) > 5
             assert isinstance(p["complexity"], str) and p["complexity"].startswith("Level ")
             assert p["is_deterministic_corpus"] is True
@@ -88,6 +89,7 @@ class TestDemoPresetsExtended:
     @pytest.mark.parametrize(
         "preset_id",
         [
+            "unified_forensic_suite",
             "clean_baseline",
             "duplicate_data",
             "corrupted_model",
@@ -132,3 +134,10 @@ class TestDemoPresetsExtended:
             assert asmt["findings_count"] > 0
         elif preset_id == "provenance_attestation":
             assert asmt["audit_chain_valid"] is True
+        elif preset_id == "unified_forensic_suite":
+            assert asmt["findings_count"] > 0
+            assert asmt["overall_risk"].lower() in ["high", "critical"]
+            # All 3 layers must have executed detectors!
+            assert any("di" in d.lower() for d in executed_detectors)
+            assert any("mi" in d.lower() for d in executed_detectors)
+            assert any("pi" in d.lower() for d in executed_detectors)

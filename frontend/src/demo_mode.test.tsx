@@ -168,9 +168,9 @@ describe('PRAMAAN Analyst-Facing Demo Mode Suite', () => {
     expect(await screen.findByRole('button', { name: /Custom Assessment/i })).toBeDefined();
     expect(screen.getByRole('button', { name: /Demo Mode \(Corpus Scenarios\)/i })).toBeDefined();
 
-    // In custom mode, teaser banner is visible, large preset grid is not cluttering
-    expect(screen.getByText('Looking for reproducible evaluation scenarios?')).toBeDefined();
+    // In custom mode, single primary mode switcher is active, large preset grid is not rendered
     expect(screen.queryByText('Deterministic Offline Corpus Scenarios')).toBeNull();
+    expect(screen.queryByText(/Switch to Demo Mode/i)).toBeNull();
   });
 
   it('switches to Demo Mode, rendering all 5 curated preset cards with metadata', async () => {
@@ -263,7 +263,7 @@ describe('PRAMAAN Analyst-Facing Demo Mode Suite', () => {
     const customTab = screen.getByRole('button', { name: /Custom Assessment/i });
     fireEvent.click(customTab);
 
-    expect(screen.getByText('Looking for reproducible evaluation scenarios?')).toBeDefined();
+    expect(screen.queryByText('Deterministic Offline Corpus Scenarios')).toBeNull();
   });
 
   it('renders Deterministic Offline Corpus banner on AssessmentResult after demo completion', async () => {

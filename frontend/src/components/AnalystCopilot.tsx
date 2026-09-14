@@ -253,26 +253,27 @@ export function AnalystCopilot({
       </div>
 
       {/* Cloud AI Boundary & Disclosure Banner */}
-      <div className="bg-purple-500/10 dark:bg-purple-950/20 border-b border-purple-500/20 dark:border-purple-800/30 px-4 py-2.5 flex items-start gap-2.5 text-xs text-purple-900 dark:text-purple-200">
-        <svg
-          className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <div>
-          <span className="font-semibold text-purple-700 dark:text-purple-300">CLOUD AI ENABLED: </span>
-          Assessment engine remains local and authoritative. Bounded evidence context is transmitted to OpenRouter to generate Copilot answers.
+      {(isConfigured || loadingStatus) ? (
+        <div className="bg-purple-500/10 dark:bg-purple-950/20 border-b border-purple-500/20 dark:border-purple-800/30 px-4 py-2.5 flex items-start gap-2.5 text-xs text-purple-900 dark:text-purple-200">
+          <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <span className="font-semibold text-purple-700 dark:text-purple-300">CLOUD AI ENABLED: </span>
+            Assessment engine remains local and authoritative. Bounded evidence context is transmitted to OpenRouter to generate Copilot answers.
+          </div>
         </div>
-      </div>
-
+      ) : (
+        <div className="bg-surface-2/60 border-b border-[var(--border)] px-4 py-2.5 flex items-start gap-2.5 text-xs text-2">
+          <svg className="w-4 h-4 text-3 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <span className="font-semibold text-1">CLOUD AI DISABLED: </span>
+            Core assessment engine remains fully offline.
+          </div>
+        </div>
+      )}
       {/* Active Scope Selector */}
       <div className="px-4 py-2 bg-surface-2/50 dark:bg-slate-950/40 border-b border-[var(--border)] flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5 text-3">
@@ -338,9 +339,9 @@ export function AnalystCopilot({
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <button
                     key={q}
-                    disabled={submitting}
+                    disabled={submitting || (!isConfigured && !loadingStatus)}
                     onClick={() => handleSendMessage(q)}
-                    className="text-xs text-2 bg-surface hover:bg-surface-2 hover:text-1 border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-left transition-colors shadow-sm"
+                    className="text-xs text-2 bg-surface hover:bg-surface-2 hover:text-1 border border-[var(--border)] rounded-lg px-2.5 py-1.5 text-left transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {q}
                   </button>
@@ -418,13 +419,15 @@ export function AnalystCopilot({
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={(!isConfigured && !loadingStatus) || submitting}
             placeholder={
+              (!isConfigured && !loadingStatus) ? 'AI is not configured. Input disabled.' :
               scope === 'finding' && findingId
                 ? `Ask about finding ${findingId} (Shift+Enter for newline)...`
                 : 'Ask Copilot about this assessment (Shift+Enter for newline)...'
             }
             rows={2}
-            className="w-full bg-transparent px-3 py-2.5 text-xs sm:text-sm text-1 placeholder:text-3 focus:outline-none resize-none font-sans"
+            className="w-full bg-transparent px-3 py-2.5 text-xs sm:text-sm text-1 placeholder:text-3 focus:outline-none resize-none font-sans disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <div className="flex items-center justify-between px-2.5 py-1.5 border-t border-[var(--border)] bg-surface-2/30 rounded-b-xl">
             <div className="text-[11px] text-3">
@@ -432,7 +435,7 @@ export function AnalystCopilot({
             </div>
             <button
               onClick={() => handleSendMessage()}
-              disabled={!inputPrompt.trim() || submitting}
+              disabled={!inputPrompt.trim() || submitting || (!isConfigured && !loadingStatus)}
               aria-label="Send message"
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
             >

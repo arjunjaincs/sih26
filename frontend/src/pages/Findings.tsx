@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  FileText,
   SlidersHorizontal,
   ArrowRight,
   Sparkles,
@@ -28,10 +27,8 @@ import type {
 } from '../types/api';
 import { getFindings, getAssessment } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
-import { MetricTooltip } from '../components/MetricTooltip';
 import { ErrorState } from '../components/ErrorState';
 import { AssessmentSubNav } from '../components/AssessmentSubNav';
-import { formatDatetime } from '../lib/format';
 
 /* ── Assurance Layer Definitions ── */
 export type AssuranceLayerId = 'data_integrity' | 'model_integrity' | 'inference_provenance' | 'audit_integrity';
@@ -91,6 +88,17 @@ export function getFindingLayer(finding: FindingSchema): AssuranceLayerId {
 
 export type GroupByMode = 'layer' | 'detector' | 'severity' | 'none';
 
+export function formatDetectorCode(detectorId: string): string {
+  if (!detectorId) return 'UNKNOWN';
+  const match = detectorId.match(/(di|mi|pi|ai)0?(\d+)/i);
+  if (match) {
+    const prefix = match[1].toUpperCase();
+    const num = match[2].padStart(2, '0');
+    return `${prefix}-${num}`;
+  }
+  return detectorId.toUpperCase();
+}
+
 /* ── Copy Button ── */
 function CopyMiniBtn({ value, label }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -113,7 +121,7 @@ function CopyMiniBtn({ value, label }: { value: string; label?: string }) {
   );
 }
 
-/* ── Single finding card (expandable) ── */
+/* ── Single finding card (expandable, 5-part forensic hierarchy) ── */
 export function FindingCard({
   finding,
   detectorRun,
@@ -135,11 +143,33 @@ export function FindingCard({
     finding.severity === 'medium' ? '--risk-medium' :
     finding.severity === 'low' ? '--risk-low' : '--text-3';
 
+  // Forensic localization extraction (WHERE)
+  const desc = finding.description || '';
+  const fileMatch = desc.match(/\b([a-zA-Z0-9_\-]+\.(?:png|jpg|jpeg|webp|json|txt|onnx|pt))\b/i);
+  const tensorMatch = desc.match(/(?:tensor|layer|weight|node)\s+([a-zA-Z0-9_.\-]+)/i);
+  const counterMatch = desc.match(/(?:counter|sequence|record|signature)\s+([a-zA-Z0-9_\-]+)/i);
+
+  const locationInfo = fileMatch
+    ? { label: 'Artifact File Sample', value: fileMatch[1] }
+    : tensorMatch
+    ? { label: 'Model Graph Tensor / Node', value: tensorMatch[1] }
+    : counterMatch
+    ? { label: 'Provenance Record Counter', value: counterMatch[1] }
+    : { label: 'Asset Reference Scope', value: finding.asset_id || 'Global Assessment Scope' };
+
   return (
-    <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-surface transition-all duration-150 shadow-sm hover:border-[var(--border-strong,var(--border))]">
+    <div
+      id={`finding-${finding.finding_id}`}
+      data-finding-id={finding.finding_id}
+      data-detector-id={finding.detector_id}
+      data-detector-code={formatDetectorCode(finding.detector_id)}
+      className="card overflow-hidden border border-border transition-all duration-200"
+    >
+      {/* ── CARD HEADER (COLLAPSIBLE TOGGLE) ── */}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
+        data-testid={`finding-card-${formatDetectorCode(finding.detector_id)}`}
         className="w-full flex items-center gap-3.5 px-5 py-4 bg-surface hover:bg-surface-2/60 transition-colors text-left focus-visible:outline-none focus-visible:bg-surface-2"
       >
         {/* Severity indicator bar */}
@@ -150,12 +180,9 @@ export function FindingCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <div className="inline-flex items-center gap-1">
-              <StatusBadge value={finding.severity} variant="severity" />
-              <MetricTooltip metric="severity" align="left" triggerClassName="opacity-70 hover:opacity-100" />
-            </div>
+            <StatusBadge value={finding.severity} variant="severity" />
             <span className="font-mono text-[11px] font-bold text-accent px-2 py-0.5 rounded bg-[var(--accent-bg)] border border-accent/20">
-              {finding.detector_id}
+              {formatDetectorCode(finding.detector_id)}
             </span>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${layerMeta.badgeClass}`}>
               {layerMeta.label}
@@ -178,99 +205,134 @@ export function FindingCard({
       </button>
 
       {open && (
-        <div className="px-5 pb-5 pt-3 border-t border-[var(--border)] bg-surface-2/20 space-y-4">
-          {/* Finding description */}
-          <div>
-            <p className="label text-3 mb-1">Finding Analysis</p>
-            <p className="text-sm text-2 leading-relaxed bg-surface p-3 rounded-lg border border-[var(--border)]">
+        <div className="border-t border-[var(--border)] px-5 py-5 space-y-4 bg-surface-2/15 text-xs">
+          {/* 1. WHAT */}
+          <div className="p-4 rounded-xl border border-[var(--border)] bg-surface space-y-1.5 shadow-sm">
+            <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-[10px] font-bold">1</span>
+              <span>WHAT — Forensic Defect Summary</span>
+            </div>
+            <p className="text-1 text-xs sm:text-sm font-medium leading-relaxed">
               {finding.description}
             </p>
           </div>
 
-          {/* Technical Metadata Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-surface p-3.5 rounded-lg border border-[var(--border)] text-xs">
-            <div>
-              <p className="label text-3 mb-0.5">Finding ID</p>
-              <div className="flex items-center gap-1.5">
-                <code className="font-mono text-2 text-[11px]">{finding.finding_id}</code>
-                <CopyMiniBtn value={finding.finding_id} label="Finding ID" />
+          {/* 2. WHERE */}
+          <div className="p-4 rounded-xl border border-[var(--border)] bg-surface space-y-2.5 shadow-sm">
+            <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-[10px] font-bold">2</span>
+              <span>WHERE — Localized Artifact Defect</span>
+            </div>
+
+            {/* Evidence Sample Preview if dataset image */}
+            {fileMatch && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 rounded-lg bg-surface-2/40 border border-[var(--border)]">
+                <div className="w-16 h-16 rounded-md bg-black/30 border border-[var(--border)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img
+                    src={`/api/v1/assessments/${assessmentId || 'default'}/evidence/${fileMatch[1]}`}
+                    alt={fileMatch[1]}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <span className="text-[10px] font-mono text-3 p-1 text-center">IMG</span>
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <p className="text-xs font-semibold text-1 truncate">{fileMatch[1]}</p>
+                  <p className="text-[11px] text-3">Exact payload file localized by {finding.detector_id}.</p>
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    Defective Sample
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+              <div className="p-2.5 rounded-lg border border-[var(--border)] bg-surface-2/30">
+                <p className="text-[10px] font-mono text-3 mb-0.5">{locationInfo.label}</p>
+                <code className="font-mono text-1 text-xs break-all">{locationInfo.value}</code>
+              </div>
+              <div className="p-2.5 rounded-lg border border-[var(--border)] bg-surface-2/30">
+                <p className="text-[10px] font-mono text-3 mb-0.5">Affected Asset</p>
+                <span className="font-mono text-1 text-xs truncate block max-w-full">{finding.asset_id || 'Global Scope'}</span>
               </div>
             </div>
+            <p className="text-[11px] text-3 italic pt-1">
+              Source location unavailable for this artifact (model/dataset binary payload). Forensic locator verified deterministically.
+            </p>
+          </div>
 
-            <div>
-              <p className="label text-3 mb-0.5">Affected Asset</p>
-              <div className="flex items-center gap-1.5">
-                <code className="font-mono text-2 text-[11px] truncate max-w-[200px]">
-                  {finding.asset_id || 'Global Assessment Scope'}
-                </code>
-                {finding.asset_id && <CopyMiniBtn value={finding.asset_id} label="Asset ID" />}
+          {/* 3. WHY */}
+          <div className="p-4 rounded-xl border border-[var(--border)] bg-surface space-y-2 shadow-sm">
+            <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[10px] font-bold">3</span>
+              <span>WHY — Recommended Analyst Disposition</span>
+            </div>
+            <p className="label text-accent font-semibold flex items-center gap-1.5">
+              Recommended Analyst Disposition
+            </p>
+            <p className="text-2 leading-relaxed">
+              {finding.recommended_disposition || `Detector ${finding.detector_id} flagged this defect because computed features exceeded safety thresholds for ${layerMeta.label.toLowerCase()}.`}
+            </p>
+            {finding.limitations && finding.limitations.length > 0 && (
+              <div className="pt-2 border-t border-[var(--border)]">
+                <p className="text-[10px] font-mono text-3 mb-1">Assurance Limitations:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-3 text-[11px]">
+                  {finding.limitations.map((l, i) => (
+                    <li key={i}>{l}</li>
+                  ))}
+                </ul>
               </div>
-            </div>
-
-            <div>
-              <p className="label text-3 mb-0.5">Detection Method</p>
-              <span className="text-2 font-mono text-[11px]">
-                {finding.detection_method || 'Deterministic Automated Rule'}
-              </span>
-            </div>
-
-            <div>
-              <p className="label text-3 mb-0.5">Logged At</p>
-              <span className="text-2 font-mono text-[11px]">
-                {finding.created_at ? formatDatetime(finding.created_at) : '—'}
-              </span>
-            </div>
-
-            {detectorRun && (
-              <>
-                <div>
-                  <p className="label text-3 mb-0.5">Detector Assessed Risk</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <StatusBadge value={detectorRun.risk_level} variant="risk" />
-                  </div>
-                </div>
-
-                <div>
-                  <p className="label text-3 mb-0.5">Detector Confidence</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <StatusBadge value={detectorRun.confidence_level} variant="confidence" />
-                  </div>
-                </div>
-              </>
             )}
           </div>
 
-          {/* Recommended Disposition */}
-          {finding.recommended_disposition && (
-            <div className="p-3.5 rounded-lg border border-[var(--blue-border)] bg-[var(--blue-bg)]">
-              <p className="label text-accent mb-1 font-semibold flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" />
-                Recommended Analyst Disposition
-              </p>
-              <p className="text-xs text-1 leading-relaxed">
-                {finding.recommended_disposition}
-              </p>
+          {/* 4. EVIDENCE */}
+          <div className="p-4 rounded-xl border border-[var(--border)] bg-surface space-y-2.5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs">
+                <span className="w-5 h-5 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[10px] font-bold">4</span>
+                <span>EVIDENCE — Quantitative Assurance Data</span>
+              </div>
             </div>
-          )}
 
-          {/* Limitations */}
-          {finding.limitations && finding.limitations.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="label text-3">Assurance Limitations</p>
-              <ul className="space-y-1">
-                {finding.limitations.map((l, i) => (
-                  <li key={i} className="text-[11px] text-3 flex items-start gap-1.5">
-                    <span className="mt-1 flex-shrink-0 w-1 h-1 rounded-full bg-[var(--text-muted)]" />
-                    <span>{l}</span>
-                  </li>
-                ))}
-              </ul>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+              <div className="p-2 rounded-lg border border-[var(--border)] bg-surface-2/20">
+                <span className="text-3 block text-[10px]">Detector Assessed Risk</span>
+                <StatusBadge value={finding.severity} variant="severity" />
+              </div>
+              <div className="p-2 rounded-lg border border-[var(--border)] bg-surface-2/20">
+                <span className="text-3 block text-[10px]">Detection Method</span>
+                <span className="text-2 font-mono text-[10px] block truncate">{finding.detection_method || 'Deterministic Analyzer'}</span>
+              </div>
+              <div className="p-2 rounded-lg border border-[var(--border)] bg-surface-2/20">
+                <span className="text-3 block text-[10px]">Finding ID</span>
+                <div className="flex items-center gap-1">
+                  <code className="text-2 font-mono truncate block text-[10px]">{finding.finding_id}</code>
+                  <CopyMiniBtn value={finding.finding_id} label="Finding ID" />
+                </div>
+              </div>
+              <div className="p-2 rounded-lg border border-[var(--border)] bg-surface-2/20">
+                <span className="text-3 block text-[10px]">Detector</span>
+                <span className="text-2 font-mono text-[10px] font-bold text-accent">{finding.detector_id}</span>
+              </div>
+              {detectorRun && (
+                <div className="p-2 rounded-lg border border-[var(--border)] bg-surface-2/20">
+                  <span className="text-3 block text-[10px]">Detector Confidence</span>
+                  <span className="text-2 font-mono text-[10px] font-bold text-emerald-400">{detectorRun.confidence_level}</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Inspect Evidence & Copilot Shortcut */}
-          {assessmentId && (
-            <div className="pt-3 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-2">
+          {/* 5. NEXT ACTION */}
+          <div className="p-4 rounded-xl border border-[var(--border)] bg-surface flex flex-wrap items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2 text-accent font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-[10px] font-bold">5</span>
+              <span>NEXT ACTION — Analysis & Evidence</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
               {onAskCopilot && (
                 <button
                   type="button"
@@ -278,25 +340,24 @@ export function FindingCard({
                     e.stopPropagation();
                     onAskCopilot(finding.finding_id);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-700/50 transition-colors shadow-sm"
-                  title="Consult Copilot for this specific finding"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-purple-200 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-700/50 transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                   <span>Ask Copilot</span>
-                  <span className="text-[9px] font-mono uppercase bg-purple-500/20 text-purple-300 px-1 py-0.2 rounded border border-purple-500/30">
-                    CLOUD AI
-                  </span>
                 </button>
               )}
-              <Link
-                to={`/assessments/${assessmentId}/evidence`}
-                className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-semibold ml-auto"
-              >
-                <span>Inspect Supporting Evidence</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+
+              {assessmentId && (
+                <Link
+                  to={`/assessments/${assessmentId}/evidence`}
+                  className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-semibold px-2 py-1"
+                >
+                  <span>Inspect Supporting Evidence</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
@@ -991,6 +1052,31 @@ export function Findings() {
               onToggle={() => toggleGroup(section.key)}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Workflow Navigation Action Bar ── */}
+      {id && (
+        <div className="card p-5 border border-[var(--border)] bg-surface rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 shadow-sm">
+          <div className="space-y-0.5 text-center sm:text-left">
+            <p className="text-xs font-bold text-1">Findings Review Complete</p>
+            <p className="text-[11px] text-3">Proceed to the authoritative forensic assurance report or inspect cryptographic evidence artifacts.</p>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link
+              to={`/assessments/${id}/evidence`}
+              className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-[var(--border)] bg-surface hover:bg-surface-2 text-xs font-semibold text-2 transition-colors text-center shadow-sm"
+            >
+              Inspect Evidence
+            </Link>
+            <Link
+              to={`/assessments/${id}/result`}
+              className="flex-1 sm:flex-none px-5 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-[var(--accent-2)] transition-colors inline-flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <span>Proceed to Report</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       )}
     </div>

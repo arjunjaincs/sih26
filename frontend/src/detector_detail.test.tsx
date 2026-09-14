@@ -1,9 +1,47 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DetectorDetailModal } from './components/DetectorDetailModal';
-import { DETECTOR_SPECS, getDetectorDetail } from './lib/detectorRegistry';
+import { DETECTOR_SPECS, getDetectorDetail, normalizeDetectorCode } from './lib/detectorRegistry';
 import { DetectorMatrix } from './components/DetectorMatrix';
 import { MemoryRouter } from 'react-router-dom';
+
+describe('normalizeDetectorCode Canonical Resolution', () => {
+  it('correctly distinguishes MI-05 and DI-03 without trigger_anomaly collisions', () => {
+    expect(normalizeDetectorCode('model.integrity.mi05_trigger_anomaly')).toBe('MI-05');
+    expect(normalizeDetectorCode('data.integrity.di03_trigger_anomaly')).toBe('DI-03');
+
+    const mi05Detail = getDetectorDetail('model.integrity.mi05_trigger_anomaly');
+    expect(mi05Detail.code).toBe('MI-05');
+    expect(mi05Detail.pillar).toBe('Model Integrity');
+
+    const di03Detail = getDetectorDetail('data.integrity.di03_trigger_anomaly');
+    expect(di03Detail.code).toBe('DI-03');
+    expect(di03Detail.pillar).toBe('Dataset Integrity');
+  });
+
+  it('correctly resolves all canonical 11 detectors plus audit ledger', () => {
+    const canonicalMap: Record<string, string> = {
+      'data.integrity.di01_duplicates': 'DI-01',
+      'data.integrity.di02_label_integrity': 'DI-02',
+      'data.integrity.di03_trigger_anomaly': 'DI-03',
+      'data.integrity.di04_feature_distribution': 'DI-04',
+      'data.integrity.di05_contributor_split': 'DI-05',
+      'model.integrity.mi01_fingerprint': 'MI-01',
+      'model.integrity.mi02_parameter_integrity': 'MI-02',
+      'model.integrity.mi03_activation_distribution': 'MI-03',
+      'model.integrity.mi04_reference_comparison': 'MI-04',
+      'model.integrity.mi05_trigger_anomaly': 'MI-05',
+      'inference.provenance.pi01_integrity': 'PI-01',
+      'audit.ledger.at01_trail': 'AT-01',
+    };
+
+    for (const [id, expectedCode] of Object.entries(canonicalMap)) {
+      expect(normalizeDetectorCode(id)).toBe(expectedCode);
+      const detail = getDetectorDetail(id);
+      expect(detail.code).toBe(expectedCode);
+    }
+  });
+});
 
 describe('DetectorDetailModal Component', () => {
   const allCodes = [

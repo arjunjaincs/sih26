@@ -199,10 +199,20 @@ def ingest_image_directory(
     image_files = list(_iter_image_files(directory))
     log.info("Found %d candidate image files in %s", len(image_files), directory)
 
-    # Check for metadata.json, contributors.json, or labels.json in directory
+    # Check for metadata.json, dataset_manifest.json, contributors.json, or labels.json in directory and parent
     contributors_map: dict[str, str] = {}
     labels_map: dict[str, list[str]] = {}
-    for meta_file in (directory / "metadata.json", directory / "contributors.json", directory / "labels.json"):
+    meta_candidates = (
+        directory / "metadata.json",
+        directory.parent / "metadata.json",
+        directory / "dataset_manifest.json",
+        directory.parent / "dataset_manifest.json",
+        directory / "contributors.json",
+        directory.parent / "contributors.json",
+        directory / "labels.json",
+        directory.parent / "labels.json",
+    )
+    for meta_file in meta_candidates:
         if meta_file.is_file():
             try:
                 with open(meta_file, "r", encoding="utf-8") as mf:
@@ -216,6 +226,15 @@ def ingest_image_directory(
                                     labels_map[str(k)] = [str(x) for x in v]
                                 else:
                                     labels_map[str(k)] = [str(v)]
+                        elif "samples" in mdata and isinstance(mdata["samples"], list):
+                            for it in mdata["samples"]:
+                                if isinstance(it, dict) and "file_name" in it:
+                                    if "contributor" in it:
+                                        contributors_map[str(it["file_name"])] = str(it["contributor"])
+                                    if "label" in it:
+                                        labels_map[str(it["file_name"])] = [str(it["label"])]
+                                    elif "labels" in it and isinstance(it["labels"], list):
+                                        labels_map[str(it["file_name"])] = [str(x) for x in it["labels"]]
                         elif "images" in mdata and isinstance(mdata["images"], list):
                             for it in mdata["images"]:
                                 if isinstance(it, dict) and "file_name" in it:

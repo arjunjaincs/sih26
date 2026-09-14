@@ -62,7 +62,7 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
     '--risk-none';
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 sm:px-5 sm:py-4 border-b border-[var(--border)] last:border-0 hover:bg-surface-2/60 transition-all duration-150 group">
+    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 p-4 sm:px-5 sm:py-4 border-b border-[var(--border)] last:border-0 hover:bg-surface-2/60 transition-all duration-150 group">
       {/* Left block: Status + Title & ID */}
       <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
         <div className="flex-shrink-0 pt-0.5 sm:pt-0">
@@ -84,7 +84,7 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-3">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-3 mt-0.5">
             <code className="text-[11px] font-mono text-3 tracking-tight">{a.assessment_id}</code>
             <CopyIdButton id={a.assessment_id} />
             <span className="text-3">·</span>
@@ -146,7 +146,7 @@ function AssessmentRow({ a }: { a: AssessmentSummarySchema }) {
       </div>
 
       {/* Right block: Action buttons */}
-      <div className="flex items-center gap-2 flex-shrink-0 self-end lg:self-auto">
+      <div className="flex flex-wrap items-center gap-2 flex-shrink-0 self-start xl:self-auto">
         <ReportDownloadButton
           assessmentId={a.assessment_id}
           size="sm"

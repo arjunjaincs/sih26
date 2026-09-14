@@ -28,6 +28,66 @@ _CORPUS_DIR = (
 def _build_presets() -> list[DemoPresetSchema]:
     presets: list[DemoPresetSchema] = []
 
+    # 0. Premier Showcase: Unified Multi-Layer Forensic Suite (Dataset + Model + Provenance)
+    unified_dataset = _CORPUS_DIR / "scenarios" / "04_label_flip" / "input" / "images"
+    unified_model = _CORPUS_DIR / "models" / "scenarios" / "06_trigger_convergence" / "input" / "model.onnx"
+    prov_dir = _CORPUS_DIR / "provenance" / "scenarios" / "01_clean_provenance" / "input"
+    manifest_file = prov_dir / "manifest.json"
+    pub_key_file = prov_dir / "public_key.hex"
+    model_sha_file = prov_dir / "model_sha256.txt"
+    input_file = prov_dir / "input_image.png"
+    output_file = prov_dir / "output.json"
+
+    if (
+        unified_dataset.exists()
+        and unified_model.exists()
+        and manifest_file.exists()
+        and pub_key_file.exists()
+        and model_sha_file.exists()
+        and input_file.exists()
+        and output_file.exists()
+    ):
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as f:
+                manifest_data = json.load(f)
+            pub_hex = pub_key_file.read_text(encoding="utf-8").strip()
+            model_sha = model_sha_file.read_text(encoding="utf-8").strip()
+            input_hex = input_file.read_bytes().hex()
+            output_hex = output_file.read_bytes().hex()
+
+            presets.append(
+                DemoPresetSchema(
+                    id="unified_forensic_suite",
+                    name="Full-Spectrum Multi-Layer Audit (Data + Model + Provenance)",
+                    category="Unified Suite",
+                    description=(
+                        "Executes PRAMAAN's complete assurance battery across all 3 forensic layers: "
+                        "Dataset Label & Duplicate Integrity (DI-01..DI-05), Neural Weight & Backdoor Analysis (MI-01..MI-05), "
+                        "and Cryptographic Ed25519 Provenance Attestation (PI-01)."
+                    ),
+                    expected_risk="HIGH",
+                    expected_confidence="HIGH",
+                    detectors_targeted=["DI-01", "DI-02", "MI-01", "MI-02", "MI-05", "PI-01"],
+                    expected_layer="Multi-Layer Assurance",
+                    expected_finding_type="Label conflict (DI-02), Backdoor shortcut trigger (MI-05), Verified Provenance (PI-01)",
+                    complexity="Level 5 · Premier Showcase",
+                    is_deterministic_corpus=True,
+                    payload={
+                        "title": "Demo: Full-Spectrum Forensic Assurance Suite",
+                        "dataset_path": str(unified_dataset.resolve()),
+                        "dataset_format": "image_dir",
+                        "model_path": str(unified_model.resolve()),
+                        "provenance_manifest": manifest_data,
+                        "provenance_public_key_hex": pub_hex,
+                        "actual_model_sha256": model_sha,
+                        "actual_input_bytes_hex": input_hex,
+                        "actual_output_bytes_hex": output_hex,
+                    },
+                )
+            )
+        except Exception:
+            pass
+
     # 1. Clean Reference Baseline
     clean_model = _CORPUS_DIR / "models" / "scenarios" / "01_clean_reference" / "input" / "model.onnx"
     clean_ref = _CORPUS_DIR / "models" / "scenarios" / "01_clean_reference" / "input" / "reference.onnx"

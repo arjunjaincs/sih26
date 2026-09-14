@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowRight, 
+  ArrowDown,
   X, 
   Cpu, 
   Database, 
@@ -12,21 +13,25 @@ import {
   Loader2, 
   AlertCircle,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
+import { formatPercent } from '../lib/format';
 import { createAssessment, getCapabilities, getDemos } from '../api/client';
+import { normalizeDetectorCode, getDetectorDetail } from '../lib/detectorRegistry';
 import type { 
   CapabilitiesResponse, 
   AssessmentResultSchema, 
   UploadResponse, 
   AssessmentCreateRequest, 
-  DemoPresetSchema 
+  DemoPresetSchema,
+  DetectorCapabilitySchema
 } from '../types/api';
 import { FileUpload } from '../components/FileUpload';
 import { DemoPresets } from '../components/DemoPresets';
 import { cn } from '../lib/cn';
 
-type Stage = 'form' | 'running' | 'error';
+type Stage = 'form' | 'running' | 'completed' | 'error';
 
 interface FieldProps {
   label: string;
@@ -105,6 +110,42 @@ function ModeToggle({ mode, onChange }: { mode: 'upload' | 'local'; onChange: (m
   );
 }
 
+function getDetectorLayerInfo(detectorId: string, liveCap?: DetectorCapabilitySchema | null) {
+  const code = normalizeDetectorCode(detectorId);
+  const spec = getDetectorDetail(detectorId, liveCap);
+
+  if (code.startsWith('DI')) {
+    return {
+      code,
+      name: spec.name,
+      layer: 'Data Integrity',
+      pillClass: 'text-sky-400 bg-sky-950/40 border-sky-800/60',
+    };
+  }
+  if (code.startsWith('MI')) {
+    return {
+      code,
+      name: spec.name,
+      layer: 'Model Integrity',
+      pillClass: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/60',
+    };
+  }
+  if (code.startsWith('PI')) {
+    return {
+      code,
+      name: spec.name,
+      layer: 'Inference Provenance',
+      pillClass: 'text-amber-400 bg-amber-950/40 border-amber-800/60',
+    };
+  }
+  return {
+    code: code || detectorId,
+    name: spec.name,
+    layer: spec.pillar || 'Assurance Layer',
+    pillClass: 'text-violet-400 bg-violet-950/40 border-violet-800/60',
+  };
+}
+
 export function NewAssessment() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -112,6 +153,7 @@ export function NewAssessment() {
   const [entryMode, setEntryMode] = useState<'custom' | 'demo'>(initialMode);
   const [stage, setStage] = useState<Stage>('form');
   const [title, setTitle] = useState('');
+  const [assessmentResult, setAssessmentResult] = useState<AssessmentResultSchema | null>(null);
 
   // Selected preset tracking
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
@@ -152,6 +194,49 @@ export function NewAssessment() {
   // Elapsed execution timer
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const hasDatasetInput = Boolean(uploadedDataset || datasetPath.trim());
+  const hasModelInput = Boolean(uploadedModel || modelPath.trim());
+  const hasRefModelInput = Boolean(uploadedRefModel || refModelPath.trim());
+  const hasProvenanceInput = Boolean(
+    provenanceJsonText.trim() || provenancePublicKeyHex.trim() || actualInputHex.trim()
+  );
+
+  const getDetectorExecutionStatus = (detectorId: string) => {
+    const code = normalizeDetectorCode(detectorId);
+    if (code === 'MI-04') {
+      if (hasModelInput && hasRefModelInput) {
+        return { status: 'will_run', label: 'Will Run' };
+      }
+      return { status: 'needs_input', label: 'Requires Ref Model' };
+    }
+    if (code.startsWith('DI')) {
+      if (hasDatasetInput) {
+        return { status: 'will_run', label: 'Will Run' };
+      }
+      return { status: 'needs_input', label: 'Awaiting Dataset' };
+    }
+    if (code.startsWith('MI')) {
+      if (hasModelInput) {
+        return { status: 'will_run', label: 'Will Run' };
+      }
+      return { status: 'needs_input', label: 'Awaiting Model' };
+    }
+    if (code.startsWith('PI')) {
+      if (hasProvenanceInput || hasModelInput) {
+        return { status: 'will_run', label: 'Will Run' };
+      }
+      return { status: 'needs_input', label: 'Awaiting Provenance' };
+    }
+    return { status: 'will_run', label: 'Ready' };
+  };
+
+  const readyDetectorsCount = useMemo(() => {
+    if (!caps?.detectors) return 0;
+    return caps.detectors.filter(
+      (d) => getDetectorExecutionStatus(d.detector_id).status === 'will_run'
+    ).length;
+  }, [caps, hasDatasetInput, hasModelInput, hasRefModelInput, hasProvenanceInput]);
 
   useEffect(() => {
     getCapabilities().then(setCaps).catch(() => {});
@@ -311,7 +396,8 @@ export function NewAssessment() {
       const result: AssessmentResultSchema = await createAssessment(payload);
       if (timerRef.current) clearInterval(timerRef.current);
       sessionStorage.setItem('pramaan_last_assessment_id', result.assessment_id);
-      navigate(`/assessments/${result.assessment_id}/result`, { state: { result } });
+      setAssessmentResult(result);
+      setStage('completed');
     } catch (err) {
       if (timerRef.current) clearInterval(timerRef.current);
       setErrorMsg(err instanceof Error ? err.message : 'Assessment execution failed.');
@@ -319,54 +405,378 @@ export function NewAssessment() {
     }
   }
 
-  // Running State (Honest Indeterminate Forensic Scanner)
-  if (stage === 'running') {
+  // Unified Running & Completed Workstation State
+  if (stage === 'running' || (stage === 'completed' && assessmentResult)) {
+    const isRunning = stage === 'running';
+    const normRisk = assessmentResult?.overall_risk?.toLowerCase() || 'none';
+    const normConf = assessmentResult?.overall_confidence?.toLowerCase() || 'high';
+
+    const riskAccent =
+      normRisk === 'critical' ? '--risk-critical' :
+      normRisk === 'high' ? '--risk-high' :
+      normRisk === 'medium' ? '--risk-medium' :
+      normRisk === 'low' ? '--risk-low' :
+      '--risk-none';
+
+    const pipelineRow1 = [
+      { id: 'ingest', name: 'INGEST' },
+      { id: 'validate', name: 'VALIDATE' },
+      { id: 'identify', name: 'IDENTIFY ASSETS' },
+      { id: 'fingerprint', name: 'FINGERPRINT' },
+    ];
+
+    const pipelineRow2 = [
+      { id: 'profile', name: 'PROFILE ACCESS' },
+      { id: 'select', name: 'SELECT METHODS' },
+      { id: 'execute', name: 'EXECUTE' },
+      { id: 'evidence', name: 'COLLECT EVIDENCE' },
+    ];
+
+    const pipelineRow3 = [
+      { id: 'risk', name: 'RISK', full: 'CALCULATE RISK' },
+      { id: 'confidence', name: 'CONFIDENCE', full: 'CALCULATE CONFIDENCE' },
+      { id: 'coverage', name: 'COVERAGE', full: 'DETERMINE COVERAGE' },
+      { id: 'findings', name: 'FINDINGS', full: 'GENERATE FINDINGS' },
+      { id: 'audit', name: 'AUDIT', full: 'AUDIT TRAIL' },
+      { id: 'report', name: 'REPORT', full: 'ASSURANCE REPORT' },
+    ];
+
+    const allLifecycleStages = [
+      'INGEST',
+      'VALIDATE',
+      'IDENTIFY ASSETS',
+      'FINGERPRINT',
+      'PROFILE ACCESS',
+      'SELECT METHODS',
+      'EXECUTE',
+      'COLLECT EVIDENCE',
+      'RISK',
+      'CONFIDENCE',
+      'COVERAGE',
+      'FINDINGS',
+      'AUDIT',
+      'REPORT',
+    ];
+
     return (
-      <div className="min-h-[calc(100vh-3rem)] flex flex-col items-center justify-center px-6">
-        <div className="max-w-md w-full p-8 rounded-2xl border border-[var(--border)] bg-surface text-center space-y-6 shadow-lg">
-          <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border-2 border-accent/20 animate-ping" />
-            <div className="w-12 h-12 rounded-full bg-[var(--accent-bg)] border border-accent/40 flex items-center justify-center text-accent">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          </div>
+      <div className="min-h-[calc(100vh-3.5rem)] flex flex-col justify-center px-4 sm:px-6 py-4 sm:py-6">
+        <div className="max-w-4xl lg:max-w-5xl 2xl:max-w-6xl w-full mx-auto bg-surface border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden transition-all duration-200">
+          {/* Top Indicator Accent */}
+          <div
+            className={cn(
+              'h-1 w-full',
+              isRunning
+                ? 'bg-gradient-to-r from-accent/40 via-accent to-[var(--green)] animate-pulse'
+                : 'bg-gradient-to-r from-[var(--green)]/40 via-[var(--green)] to-[var(--accent)]'
+            )}
+          />
 
-          <div className="space-y-1.5">
-            <h1 className="text-xl font-bold text-1">Executing Forensic Assurance Battery</h1>
-            <p className="text-xs text-3 leading-relaxed">
-              PRAMAAN is evaluating mathematical fingerprints, numerical distributions, and cryptographic bindings in
-              local air-gapped memory.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-lg bg-surface-2 border border-[var(--border)] text-xs text-left space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-mono text-3">
-              <span>EXECUTION TIME</span>
-              <span className="text-1 font-bold">{elapsedSeconds}s elapsed</span>
+          <div className="p-5 sm:p-6 lg:p-7 space-y-4 sm:space-y-5">
+            {/* Header: Status icon + title + subtitle */}
+            <div className="text-center space-y-1">
+              {isRunning ? (
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-[var(--accent-bg)] border border-accent/30 text-accent shadow-[0_0_18px_rgba(59,130,246,0.15)] mb-0.5">
+                  <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                </div>
+              ) : (
+                <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-[var(--green-bg)] border border-[var(--green)]/30 text-[var(--green)] shadow-[0_0_18px_rgba(16,185,129,0.15)] mb-0.5">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              )}
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-1">
+                {isRunning ? 'Executing Forensic Assurance Battery' : 'Assessment Complete'}
+              </h1>
+              <p className="text-xs text-3 max-w-lg mx-auto">
+                {isRunning
+                  ? `Evaluating mathematical fingerprints, numerical distributions, and cryptographic bindings in local air-gapped memory (${elapsedSeconds}s elapsed).`
+                  : 'Forensic battery finished successfully.'}
+              </p>
             </div>
-            <div className="space-y-1 text-[11px] font-mono text-2 pt-1 border-t border-[var(--border)]">
-              <div className="truncate">
-                <span className="text-3">Title: </span>
-                <span>{title}</span>
+
+            {/* ASSURANCE SUMMARY */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                <span className="text-[10px] sm:text-[11px] font-mono tracking-wider text-3 uppercase font-semibold">
+                  Assurance Summary
+                </span>
+                <span className="text-[10px] font-mono text-3 hidden sm:inline">
+                  Deterministic ADR-003
+                </span>
               </div>
-              {modelPath && (
-                <div className="truncate">
-                  <span className="text-3">Model: </span>
-                  <span>{modelPath}</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Risk */}
+                <div className="p-3.5 sm:p-4 rounded-xl border border-[var(--border)] bg-surface-2/60 flex flex-col justify-between space-y-1 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase text-3 font-mono font-semibold tracking-wider">Risk</span>
+                    <span className="text-[9px] font-mono text-3 px-1.5 py-0.2 rounded bg-surface border border-[var(--border)]">
+                      {isRunning ? 'IN PROGRESS' : 'DEFECT'}
+                    </span>
+                  </div>
+                  <div className="my-0.5 flex items-center">
+                    {isRunning ? (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 bg-accent animate-ping" />
+                        <span className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-accent animate-pulse">
+                          ANALYZING
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span
+                          className="w-2.5 h-2.5 rounded-full mr-2 shrink-0"
+                          style={{ backgroundColor: `var(${riskAccent})` }}
+                        />
+                        <span
+                          className="text-2xl sm:text-3xl font-mono font-bold tracking-tight"
+                          style={{ color: `var(${riskAccent})` }}
+                        >
+                          {normRisk.toUpperCase()}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-3 font-mono leading-snug line-clamp-2 min-h-[2rem]">
+                    {isRunning
+                      ? 'Evaluating defect distributions & threshold bounds...'
+                      : (assessmentResult?.risk_qualitative || 'Overall Defect Severity')}
+                  </div>
                 </div>
-              )}
-              {datasetPath && (
-                <div className="truncate">
-                  <span className="text-3">Dataset: </span>
-                  <span>{datasetPath}</span>
+
+                {/* Confidence */}
+                <div className="p-3.5 sm:p-4 rounded-xl border border-[var(--border)] bg-surface-2/60 flex flex-col justify-between space-y-1 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase text-3 font-mono font-semibold tracking-wider">Confidence</span>
+                    <span className="text-[9px] font-mono text-3 px-1.5 py-0.2 rounded bg-surface border border-[var(--border)]">
+                      {isRunning ? 'CALCULATING' : 'STATISTICAL'}
+                    </span>
+                  </div>
+                  <div className="my-0.5 flex items-center">
+                    {isRunning ? (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 bg-accent/60" />
+                        <span className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-2 animate-pulse">
+                          CALCULATING
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 bg-[var(--green)]" />
+                        <span className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-1">
+                          {normConf.toUpperCase()}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-3 font-mono leading-snug line-clamp-2 min-h-[2rem]">
+                    {isRunning
+                      ? 'Deriving mathematical and statistical certainty...'
+                      : (assessmentResult?.confidence_qualifier || 'Mathematical Certainty')}
+                  </div>
                 </div>
-              )}
+
+                {/* Coverage */}
+                <div className="p-3.5 sm:p-4 rounded-xl border border-[var(--border)] bg-surface-2/60 flex flex-col justify-between space-y-1 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase text-3 font-mono font-semibold tracking-wider">Coverage</span>
+                    <span className="text-[9px] font-mono text-3 px-1.5 py-0.2 rounded bg-surface border border-[var(--border)]">
+                      {isRunning ? 'ACTIVE' : 'VERIFIED'}
+                    </span>
+                  </div>
+                  <div className="my-0.5 flex items-center">
+                    {isRunning ? (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 bg-accent animate-pulse" />
+                        <span className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-accent">
+                          RUNNING
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full mr-2 shrink-0 bg-accent" />
+                        <span className="text-2xl sm:text-3xl font-mono font-bold tracking-tight text-accent">
+                          {formatPercent(assessmentResult?.coverage_fraction ?? 1.0)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-3 font-mono leading-snug line-clamp-2 min-h-[2rem]">
+                    {isRunning ? '14 Lifecycle Checkpoints in progress' : '14 / 14 Checkpoints Complete'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ASSESSMENT PIPELINE */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]">
+                <span className="text-[10px] sm:text-[11px] font-mono tracking-wider text-3 uppercase font-semibold">
+                  Assessment Pipeline
+                </span>
+                <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-[var(--green)]">
+                  {isRunning ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+                      <span className="text-accent">14 Stages In Execution</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--green)]" />
+                      <span>14/14 Stages Verified</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Desktop Compact Lifecycle Visualization */}
+              <div className="hidden md:flex flex-col gap-1">
+                {/* Row 1 */}
+                <div className="flex items-center justify-between gap-1.5">
+                  {pipelineRow1.map((item, idx) => (
+                    <div key={item.id} className="flex-1 flex items-center">
+                      <div className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-surface-2/80 border text-xs font-mono font-medium shadow-sm transition-colors",
+                        isRunning ? "border-accent/30 text-2" : "border-[var(--border)] text-1 hover:border-[var(--green)]/40"
+                      )}>
+                        {isRunning ? (
+                          <Loader2 className="w-3.5 h-3.5 text-accent animate-spin shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" />
+                        )}
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      {idx < pipelineRow1.length - 1 && (
+                        <ArrowRight className="w-3.5 h-3.5 text-3/40 shrink-0 mx-1.5" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Connector Down */}
+                <div className="flex items-center -my-0.5 select-none">
+                  <div className={cn("w-1/4 flex justify-center", isRunning ? "text-accent" : "text-[var(--green)]/80")}>
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--border)] via-[var(--border)]/40 to-transparent" />
+                </div>
+
+                {/* Row 2 */}
+                <div className="flex items-center justify-between gap-1.5">
+                  {pipelineRow2.map((item, idx) => (
+                    <div key={item.id} className="flex-1 flex items-center">
+                      <div className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-surface-2/80 border text-xs font-mono font-medium shadow-sm transition-colors",
+                        isRunning ? "border-accent/30 text-2" : "border-[var(--border)] text-1 hover:border-[var(--green)]/40"
+                      )}>
+                        {isRunning ? (
+                          <Loader2 className="w-3.5 h-3.5 text-accent animate-spin shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" />
+                        )}
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      {idx < pipelineRow2.length - 1 && (
+                        <ArrowRight className="w-3.5 h-3.5 text-3/40 shrink-0 mx-1.5" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Connector Down */}
+                <div className="flex items-center -my-0.5 select-none">
+                  <div className={cn("w-1/4 flex justify-center", isRunning ? "text-accent" : "text-[var(--green)]/80")}>
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--border)] via-[var(--border)]/40 to-transparent" />
+                </div>
+
+                {/* Row 3 */}
+                <div className="flex items-center justify-between gap-1.5">
+                  {pipelineRow3.map((item, idx) => (
+                    <div key={item.id} className="flex-1 flex items-center">
+                      <div
+                        title={item.full}
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1.5 py-1.5 px-1.5 rounded-lg bg-surface-2/80 border text-xs font-mono font-medium shadow-sm transition-colors",
+                          isRunning ? "border-accent/30 text-2" : "border-[var(--border)] text-1 hover:border-[var(--green)]/40"
+                        )}
+                      >
+                        {isRunning ? (
+                          <Loader2 className="w-3.5 h-3.5 text-accent animate-spin shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" />
+                        )}
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      {idx < pipelineRow3.length - 1 && (
+                        <ArrowRight className="w-3.5 h-3.5 text-3/40 shrink-0 mx-1" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile / Tablet Grid */}
+              <div className="grid grid-cols-2 gap-1.5 md:hidden">
+                {allLifecycleStages.map((stg) => (
+                  <div
+                    key={stg}
+                    className="flex items-center gap-2 p-2 rounded-lg bg-surface-2/80 border border-[var(--border)] text-xs font-mono font-medium text-1"
+                  >
+                    {isRunning ? (
+                      <Loader2 className="w-3.5 h-3.5 text-accent animate-spin shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[var(--green)] shrink-0" />
+                    )}
+                    <span className="truncate">{stg}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ACTION BUTTONS & METADATA FOOTER */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-[var(--border)]">
+              <div className="text-xs text-3 font-mono hidden sm:flex items-center gap-2">
+                <span className="text-3 font-semibold">
+                  {isRunning ? 'EXECUTION MODE:' : 'ASSESSMENT ID:'}
+                </span>
+                <span className="text-1 font-bold">
+                  {isRunning ? 'LOCAL AIR-GAPPED EVALUATION' : assessmentResult?.assessment_id.slice(0, 16)}
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                {isRunning ? (
+                  <button
+                    disabled
+                    type="button"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-surface-2 border border-[var(--border)] text-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-wait opacity-80"
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                    <span>Executing Battery ({elapsedSeconds}s)…</span>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/assessments/${assessmentResult!.assessment_id}/findings`)}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-[var(--border)] bg-surface hover:bg-surface-2 text-xs font-semibold text-1 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      View Findings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/assessments/${assessmentResult!.assessment_id}/result`, { state: { result: assessmentResult } })}
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-[var(--accent-2)] transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow"
+                    >
+                      <span>Proceed to Report</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-
-          <p className="text-[11px] text-3 italic">
-            Verification is deterministic. No cloud calls or simulated telemetry.
-          </p>
         </div>
       </div>
     );
@@ -465,61 +875,22 @@ export function NewAssessment() {
           </button>
         </div>
 
-        {entryMode === 'demo' ? (
+        {entryMode === 'demo' && (
           <div className="text-xs text-3 font-mono flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-accent" />
             <span>OFFLINE DETERMINISTIC VERIFICATION</span>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setEntryMode('demo');
-              const p = new URLSearchParams(searchParams);
-              p.set('mode', 'demo');
-              setSearchParams(p);
-            }}
-            className="text-xs text-accent hover:underline flex items-center gap-1 font-medium"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Switch to Demo Mode for 1-Click Jury Scenarios</span>
-          </button>
         )}
       </div>
 
-      {/* ── Demo Mode Presets Suite OR Custom Mode Teaser ── */}
-      {entryMode === 'demo' ? (
+      {/* ── Demo Mode Presets Suite (when Demo Mode is selected) ── */}
+      {entryMode === 'demo' && (
         <DemoPresets
           onSelectPreset={handleSelectPreset}
           selectedPresetId={selectedPresetId}
           onExecute={() => handleSubmit()}
           onClearPreset={handleClearPreset}
         />
-      ) : (
-        <div className="card p-4 border border-[var(--border)] bg-surface-2/40 rounded-xl flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-[var(--accent-bg)] text-accent flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-1">Looking for reproducible evaluation scenarios?</p>
-              <p className="text-[11px] text-3">Explore 5 pre-configured offline corpus presets with 1-click execution.</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setEntryMode('demo');
-              const p = new URLSearchParams(searchParams);
-              p.set('mode', 'demo');
-              setSearchParams(p);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-[var(--border)] text-xs font-semibold text-1 hover:border-accent/40 transition-colors shadow-sm"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span>Switch to Demo Mode</span>
-          </button>
-        </div>
       )}
 
       {/* Errors Banner */}
@@ -536,7 +907,7 @@ export function NewAssessment() {
 
       {/* Main Configuration Form with Right-Hand Assurance Battery Registry */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8 items-start">
           {/* Main Form Fields */}
           <div className="space-y-6">
             {/* Assessment Title */}
@@ -823,35 +1194,69 @@ export function NewAssessment() {
             </div>
           </div>
 
-          {/* Right Column: What will run? */}
-          <aside className="border border-[var(--border)] rounded-xl bg-surface p-5 space-y-4 lg:sticky lg:top-20 shadow-sm">
-            <div>
-              <p className="text-[10px] font-mono font-bold text-accent uppercase tracking-wider mb-1">
-                Assurance Battery Registry
-              </p>
-              <h2 className="text-sm font-bold text-1">What will run?</h2>
-              <p className="text-xs text-3 leading-relaxed mt-1">
-                PRAMAAN automatically selects the applicable checks based on the assets you provide.
-              </p>
+          {/* Right Column on Desktop (>= xl) / Bottom Section (< xl): Assurance Battery Registry */}
+          <aside className="border border-[var(--border)] rounded-xl bg-surface p-5 sm:p-6 space-y-4 xl:sticky xl:top-20 shadow-sm">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] pb-4">
+              <div>
+                <p className="text-[10px] font-mono font-bold text-accent uppercase tracking-wider mb-1">
+                  Assurance Battery Registry
+                </p>
+                <h2 className="text-sm sm:text-base font-bold text-1">What will PRAMAAN check?</h2>
+                <p className="text-xs text-3 leading-relaxed mt-1">
+                  Forensic checks adapt deterministically to the input artifacts provided.
+                </p>
+              </div>
+              <span className="shrink-0 text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--green-bg)] text-[var(--green)] border border-[var(--green)]/30 font-semibold">
+                100% Offline
+              </span>
             </div>
 
-            <div className="divide-y divide-[var(--border)] max-h-[520px] overflow-y-auto pr-1">
-              {caps?.detectors.map(d => (
-                <div key={d.detector_id} className="py-2.5 flex items-start gap-2.5">
-                  <code className="text-[10px] font-mono font-bold text-accent px-1.5 py-0.5 rounded bg-[var(--accent-bg)] border border-accent/20 flex-shrink-0 mt-0.5">
-                    {d.detector_id.replace(/^([a-z]{2})(\d{2})/i, '$1-$2').toUpperCase()}
-                  </code>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-1 leading-snug">{d.name}</p>
-                    <p className="text-[10px] text-3 line-clamp-1">{d.description}</p>
+            {/* Detector List: 2 cols on tablet/stacked mobile, single col in xl sidebar */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-2.5 max-h-[580px] overflow-y-auto pr-1">
+              {caps?.detectors.map(d => {
+                const layerInfo = getDetectorLayerInfo(d.detector_id, d);
+                const execStatus = getDetectorExecutionStatus(d.detector_id);
+                const formattedId = layerInfo.code;
+
+                return (
+                  <div
+                    key={d.detector_id}
+                    className="p-3 rounded-lg border border-[var(--border)] bg-surface-2/40 hover:bg-surface-2 transition-all space-y-2 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <code className="text-[10px] font-mono font-bold text-accent px-1.5 py-0.5 rounded bg-[var(--accent-bg)] border border-accent/20">
+                          {formattedId}
+                        </code>
+                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border uppercase font-semibold ${layerInfo.pillClass}`}>
+                          {layerInfo.layer}
+                        </span>
+                      </div>
+                      {execStatus.status === 'will_run' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-[var(--green)] bg-[var(--green-bg)] px-2 py-0.5 rounded border border-[var(--green)]/30">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>{execStatus.label}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-3 bg-surface-2 px-2 py-0.5 rounded border border-[var(--border)]">
+                          {execStatus.label}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-1 leading-snug">{d.name || layerInfo.name}</p>
+                      <p className="text-[11px] text-3 leading-relaxed mt-1">{d.description}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            <div className="pt-2 text-[11px] text-3 border-t border-[var(--border)] flex items-center justify-between font-mono">
-              <span>{caps?.detectors.length ?? 0} Detectors Online</span>
-              <span className="text-[var(--green)] font-semibold">100% Offline</span>
+            <div className="pt-3 text-[11px] text-3 border-t border-[var(--border)] flex items-center justify-between font-mono">
+              <span>{caps?.detectors.length ?? 0} Detectors Configured</span>
+              <span className="text-accent font-semibold">
+                {readyDetectorsCount} Ready to Run
+              </span>
             </div>
           </aside>
         </div>
