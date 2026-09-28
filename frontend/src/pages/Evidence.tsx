@@ -25,7 +25,7 @@ import type {
   EvidencePreviewResponse,
   EvidenceImagePreview
 } from '../types/api';
-import { getEvidence, getEvidencePreview } from '../api/client';
+import { getEvidence, getEvidencePreview, resolveApiUrl } from '../api/client';
 import { ErrorState } from '../components/ErrorState';
 import { AssessmentSubNav } from '../components/AssessmentSubNav';
 import { cn } from '../lib/cn';
@@ -158,7 +158,7 @@ function ImageLightboxModal({
         {/* Modal Image Viewport */}
         <div className="p-6 bg-surface-2/30 flex items-center justify-center overflow-auto max-h-[70vh]">
           <img
-            src={image.preview_url}
+            src={resolveApiUrl(image.preview_url)}
             alt={image.file_name}
             className="max-h-[60vh] max-w-full object-contain rounded-lg border border-[var(--border)] shadow-md bg-black/40"
           />
@@ -212,7 +212,7 @@ function ImageThumbnailCard({
       >
         {!loadError ? (
           <img
-            src={image.preview_url}
+            src={resolveApiUrl(image.preview_url)}
             alt={image.file_name}
             loading="lazy"
             onError={() => setLoadError(true)}

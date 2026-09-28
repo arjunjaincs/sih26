@@ -13,7 +13,7 @@ echo Root Directory: %~dp0
 cd /d "%~dp0"
 
 :: Ensure local environment
-set PRAMAAN_AI_ENABLED=false
+set PRAMAAN_AI_ENABLED=true
 set NODE_ENV=development
 
 :: Check if npx/electron is available

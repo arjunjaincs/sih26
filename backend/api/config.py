@@ -36,7 +36,12 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    _repo_root = Path(__file__).resolve().parent.parent.parent
+    _env_file = _repo_root / ".env"
+    if _env_file.is_file():
+        load_dotenv(dotenv_path=_env_file, override=True)
+    else:
+        load_dotenv(override=True)
 except ImportError:
     pass
 

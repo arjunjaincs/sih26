@@ -28,7 +28,25 @@ import type {
 // Configuration
 // ---------------------------------------------------------------------------
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+
+/**
+ * Resolve an API or asset relative path to a fully qualified URL.
+ * Handles paths starting with `/api` or relative endpoints.
+ */
+export function resolveApiUrl(pathOrUrl: string): string {
+  if (!pathOrUrl) return '';
+  if (
+    pathOrUrl.startsWith('http://') ||
+    pathOrUrl.startsWith('https://') ||
+    pathOrUrl.startsWith('data:') ||
+    pathOrUrl.startsWith('blob:')
+  ) {
+    return pathOrUrl;
+  }
+  const cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return `${BASE_URL}${cleanPath}`;
+}
 
 // ---------------------------------------------------------------------------
 // Error classes

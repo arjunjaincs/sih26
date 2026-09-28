@@ -21,6 +21,33 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const FRONTEND_DIR = path.join(PROJECT_ROOT, 'frontend');
 
 // -------------------------------------------------------------
+// Load environment variables from repo root .env if present
+// -------------------------------------------------------------
+const envFilePath = path.join(PROJECT_ROOT, '.env');
+if (fs.existsSync(envFilePath)) {
+  try {
+    const envContent = fs.readFileSync(envFilePath, 'utf8');
+    for (const rawLine of envContent.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+      const eqIdx = line.indexOf('=');
+      if (eqIdx > 0) {
+        const key = line.slice(0, eqIdx).trim();
+        let val = line.slice(eqIdx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[PRAMAAN Shell] Could not load .env:', err);
+  }
+}
+
+// -------------------------------------------------------------
 // Detect Mode: Production Distributable vs Development Source
 // -------------------------------------------------------------
 const PACKAGED_PYTHON = path.join(process.resourcesPath || '', 'backend', 'python', 'python.exe');
@@ -53,7 +80,7 @@ if (fs.existsSync(PACKAGED_PYTHON)) {
     PRAMAAN_DATA_DIR: userDataDir,
     PRAMAAN_CORPUS_DIR: path.join(resourcesRoot, 'data', 'corpus'),
     PRAMAAN_FRONTEND_DIST: path.join(resourcesRoot, 'frontend', 'dist'),
-    PRAMAAN_AI_ENABLED: 'false'
+    PRAMAAN_AI_ENABLED: process.env.PRAMAAN_AI_ENABLED || 'true'
   };
   TARGET_URL = 'http://127.0.0.1:8000/';
 } else if (fs.existsSync(LOCAL_RELEASE_PYTHON)) {
@@ -74,7 +101,7 @@ if (fs.existsSync(PACKAGED_PYTHON)) {
     PRAMAAN_DATA_DIR: userDataDir,
     PRAMAAN_CORPUS_DIR: path.join(resourcesRoot, 'data', 'corpus'),
     PRAMAAN_FRONTEND_DIST: path.join(resourcesRoot, 'frontend', 'dist'),
-    PRAMAAN_AI_ENABLED: 'false'
+    PRAMAAN_AI_ENABLED: process.env.PRAMAAN_AI_ENABLED || 'true'
   };
   TARGET_URL = 'http://127.0.0.1:8000/';
 } else {
@@ -84,7 +111,7 @@ if (fs.existsSync(PACKAGED_PYTHON)) {
   BACKEND_CWD = PROJECT_ROOT;
   BACKEND_ENV = {
     ...process.env,
-    PRAMAAN_AI_ENABLED: process.env.PRAMAAN_AI_ENABLED || 'false'
+    PRAMAAN_AI_ENABLED: process.env.PRAMAAN_AI_ENABLED || 'true'
   };
   TARGET_URL = 'http://127.0.0.1:5173/';
 }
