@@ -77,7 +77,10 @@ export interface AssessmentCreateRequest {
   assessment_id?: string | null;
   dataset_path?: string | null;
   dataset_asset_id?: string | null;
-  dataset_format?: string | null; // 'image_dir' | 'coco_json'
+  dataset_format?: string | null; // 'image_dir' | 'coco_json' | 'yolo'
+  dataset_reference_path?: string | null;
+  dataset_reference_asset_id?: string | null;
+  dataset_reference_format?: string | null; // 'image_dir' | 'coco_json' | 'yolo'
   model_path?: string | null;
   model_asset_id?: string | null;
   model_reference_path?: string | null;

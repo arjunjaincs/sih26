@@ -227,6 +227,26 @@ def create_assessment(
             max_size_mb=settings.max_dataset_size_mb * 1000,  # directory: no per-dir limit
         )
 
+    # 1b. Resolve optional dataset reference for DI-04 shift analysis
+    dataset_reference_path: Path | None = None
+    dataset_reference_format = _parse_dataset_format(body.dataset_reference_format)
+    if body.dataset_reference_asset_id:
+        upload = upload_repo.get(body.dataset_reference_asset_id)
+        if upload and upload.asset_type == "dataset":
+            resolved_ds_ref = Path(upload.storage_path)
+            if resolved_ds_ref.exists():
+                dataset_reference_path = resolved_ds_ref
+                if dataset_reference_format is None and upload.format:
+                    try:
+                        dataset_reference_format = _parse_dataset_format(upload.format)
+                    except Exception:
+                        pass
+    elif body.dataset_reference_path is not None:
+        dataset_reference_path = _validate_asset_path(
+            body.dataset_reference_path,
+            max_size_mb=settings.max_dataset_size_mb * 1000,
+        )
+
     # 2. Resolve model
     if body.model_asset_id:
         upload = upload_repo.get(body.model_asset_id)
@@ -321,6 +341,8 @@ def create_assessment(
         assessment_id=assess_id,
         dataset_path=dataset_path,
         dataset_format=dataset_format,
+        dataset_reference_path=dataset_reference_path,
+        dataset_reference_format=dataset_reference_format,
         model_path=model_path,
         model_reference_path=model_reference_path,
         model_reference_fingerprint=body.model_reference_fingerprint,

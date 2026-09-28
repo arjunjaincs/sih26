@@ -118,6 +118,8 @@ class AssessmentRequest:
     # Dataset
     dataset_path: Path | None = None
     dataset_format: DatasetFormat | None = None
+    dataset_reference_path: Path | None = None
+    dataset_reference_format: DatasetFormat | None = None
 
     # Model
     model_path: Path | None = None

@@ -391,6 +391,9 @@ def _parse_coco_json(json_path: Path) -> tuple[
     CocoValidationError on any structural problem.
     """
     try:
+        st = json_path.stat()
+        if st.st_size > 50 * 1024 * 1024:
+            raise CocoValidationError(f"COCO JSON exceeds maximum size limit of 50MB ({st.st_size} bytes)")
         raw = json_path.read_bytes()
     except OSError as exc:
         raise CocoValidationError(f"Cannot read COCO JSON: {exc}") from exc
@@ -471,6 +474,24 @@ def _parse_coco_json(json_path: Path) -> tuple[
             raise CocoValidationError(
                 f"annotations[{i}].category_id {cat_id} references unknown category"
             )
+
+        # Validate bounding box if present
+        if "bbox" in ann:
+            bbox = ann["bbox"]
+            if not isinstance(bbox, list) or len(bbox) != 4:
+                raise CocoValidationError(
+                    f"annotations[{i}].bbox must be a list of 4 numbers [x, y, width, height]"
+                )
+            for val in bbox:
+                if not isinstance(val, (int, float)) or val < 0:
+                    raise CocoValidationError(
+                        f"annotations[{i}].bbox coordinates must be non-negative numbers: {bbox}"
+                    )
+            if bbox[2] <= 0 or bbox[3] <= 0:
+                raise CocoValidationError(
+                    f"annotations[{i}].bbox width and height must be positive: {bbox}"
+                )
+
         label_name = categories[cat_id].name
         if label_name not in labels_by_image[img_id]:
             labels_by_image[img_id].append(label_name)
@@ -632,6 +653,310 @@ def ingest_coco_dataset(
 
 
 # ---------------------------------------------------------------------------
+# YOLO dataset ingestion
+# ---------------------------------------------------------------------------
+
+def ingest_yolo_dataset(
+    yolo_dir: Path,
+    dataset_id: str,
+    conn: sqlite3.Connection,
+    *,
+    images_dir: Path | None = None,
+    labels_dir: Path | None = None,
+    max_image_size_bytes: int = 50 * 1024 * 1024,
+    max_image_dimension: int = 8192,
+    max_label_size_bytes: int = 10 * 1024 * 1024,
+    skip_invalid_images: bool = False,
+) -> IngestionResult:
+    """
+    Ingest a YOLO-format dataset into the PRAMAAN database.
+
+    Directory structure:
+      yolo_dir/
+        images/     (optional subfolder; images can also reside directly in yolo_dir)
+        labels/     (optional subfolder; label .txt files can also reside directly in yolo_dir)
+        classes.txt (optional class names, 1 per line)
+        data.yaml   (optional dataset config containing 'names')
+
+    Each label file is named <image_stem>.txt and contains lines:
+      <class_id> <x_center> <y_center> <width> <height>
+    where coordinates are normalized to [0.0, 1.0].
+    """
+    import math
+
+    if not yolo_dir.is_dir():
+        raise ValueError(f"Not a directory: {yolo_dir}")
+
+    # Determine image directory
+    if images_dir is not None and images_dir.is_dir():
+        img_dir = images_dir
+    elif (yolo_dir / "images").is_dir():
+        img_dir = yolo_dir / "images"
+    else:
+        img_dir = yolo_dir
+
+    # Determine labels directory
+    if labels_dir is not None and labels_dir.is_dir():
+        lbl_dir = labels_dir
+    elif (yolo_dir / "labels").is_dir():
+        lbl_dir = yolo_dir / "labels"
+    else:
+        lbl_dir = img_dir
+
+    # Resolve class names
+    class_names: list[str] = []
+    classes_file = None
+    for cand in (
+        yolo_dir / "classes.txt",
+        lbl_dir / "classes.txt",
+        img_dir / "classes.txt",
+    ):
+        if cand.is_file():
+            classes_file = cand
+            break
+
+    if classes_file is not None:
+        try:
+            class_names = [
+                line.strip()
+                for line in classes_file.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+        except Exception as exc:
+            raise YoloValidationError(f"Cannot read classes.txt: {exc}") from exc
+    else:
+        # Check data.yaml or data.yml
+        for yml_cand in (yolo_dir / "data.yaml", yolo_dir / "data.yml"):
+            if yml_cand.is_file():
+                try:
+                    import yaml
+                    yd = yaml.safe_load(yml_cand.read_text(encoding="utf-8"))
+                    if isinstance(yd, dict) and "names" in yd:
+                        names_val = yd["names"]
+                        if isinstance(names_val, list):
+                            class_names = [str(x) for x in names_val]
+                        elif isinstance(names_val, dict):
+                            # sort by integer key if possible
+                            sorted_keys = sorted(names_val.keys(), key=lambda k: int(k) if str(k).isdigit() else k)
+                            class_names = [str(names_val[k]) for k in sorted_keys]
+                except Exception as exc:
+                    log.warning("Could not parse %s: %s", yml_cand, exc)
+                break
+
+    # Read contributors map if present
+    contributors_map: dict[str, str] = {}
+    meta_candidates = (
+        yolo_dir / "metadata.json",
+        yolo_dir.parent / "metadata.json",
+        yolo_dir / "contributors.json",
+        yolo_dir.parent / "contributors.json",
+    )
+    for meta_file in meta_candidates:
+        if meta_file.is_file():
+            try:
+                with open(meta_file, "r", encoding="utf-8") as mf:
+                    mdata = json.load(mf)
+                    if isinstance(mdata, dict):
+                        if "contributors" in mdata and isinstance(mdata["contributors"], dict):
+                            contributors_map.update({str(k): str(v) for k, v in mdata["contributors"].items()})
+                        elif "samples" in mdata and isinstance(mdata["samples"], list):
+                            for it in mdata["samples"]:
+                                if isinstance(it, dict) and "file_name" in it and "contributor" in it:
+                                    contributors_map[str(it["file_name"])] = str(it["contributor"])
+            except Exception:
+                pass
+
+    image_files = list(_iter_image_files(img_dir))
+    if not image_files:
+        raise YoloValidationError(f"No image files found in YOLO directory: {img_dir}")
+
+    sample_repo = SampleRepository(conn)
+    dataset_repo = DatasetRepository(conn)
+
+    samples_batch: list[Sample] = []
+    errors: list[SampleError] = []
+    total_ingested = 0
+
+    for img_path in image_files:
+        file_name = img_path.name
+        stem = img_path.stem
+
+        # Look for matching label file
+        lbl_path = lbl_dir / f"{stem}.txt"
+        if not lbl_path.is_file():
+            alt_path = img_path.parent / f"{stem}.txt"
+            if alt_path.is_file():
+                lbl_path = alt_path
+            else:
+                err = SampleError(
+                    file_name=file_name,
+                    reason=f"Missing label file: {stem}.txt",
+                    code="missing_label",
+                )
+                if not skip_invalid_images:
+                    raise YoloValidationError(
+                        f"Missing label file for image '{file_name}': expected '{stem}.txt' in {lbl_dir}"
+                    )
+                errors.append(err)
+                continue
+
+        # Validate label file size
+        try:
+            st = lbl_path.stat()
+            if st.st_size > max_label_size_bytes:
+                raise YoloValidationError(
+                    f"Label file {lbl_path.name} exceeds {max_label_size_bytes} bytes ({st.st_size} bytes)"
+                )
+            lbl_raw = lbl_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise YoloValidationError(f"Cannot read label file {lbl_path}: {exc}") from exc
+
+        # Parse and validate label lines
+        class_ids_in_sample: set[int] = set()
+        for line_num, line in enumerate(lbl_raw.splitlines(), start=1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            tokens = line.split()
+            if len(tokens) < 5:
+                raise YoloValidationError(
+                    f"Malformed YOLO label line in {lbl_path.name}:{line_num} "
+                    f"— expected 5 tokens (class x y w h), got {len(tokens)}: {line!r}"
+                )
+
+            # Class ID
+            try:
+                cid = int(tokens[0])
+            except ValueError:
+                raise YoloValidationError(
+                    f"Invalid non-integer class ID in {lbl_path.name}:{line_num}: {tokens[0]!r}"
+                )
+            if cid < 0:
+                raise YoloValidationError(
+                    f"Class ID must be non-negative in {lbl_path.name}:{line_num}: {cid}"
+                )
+            if class_names and cid >= len(class_names):
+                raise YoloValidationError(
+                    f"Class ID {cid} in {lbl_path.name}:{line_num} exceeds defined class count ({len(class_names)})"
+                )
+
+            # Bounding box coordinates
+            try:
+                xc = float(tokens[1])
+                yc = float(tokens[2])
+                w = float(tokens[3])
+                h = float(tokens[4])
+            except ValueError:
+                raise YoloValidationError(
+                    f"Malformed numeric coordinates in {lbl_path.name}:{line_num}: {line!r}"
+                )
+
+            if any(math.isnan(v) or math.isinf(v) for v in (xc, yc, w, h)):
+                raise YoloValidationError(
+                    f"Coordinates contain NaN or Inf in {lbl_path.name}:{line_num}: {line!r}"
+                )
+            if not (0.0 <= xc <= 1.0 and 0.0 <= yc <= 1.0):
+                raise YoloValidationError(
+                    f"Center coordinates out of bounds [0.0, 1.0] in {lbl_path.name}:{line_num}: "
+                    f"xc={xc}, yc={yc}"
+                )
+            if not (0.0 < w <= 1.0 and 0.0 < h <= 1.0):
+                raise YoloValidationError(
+                    f"Width or height out of bounds (0.0, 1.0] in {lbl_path.name}:{line_num}: "
+                    f"w={w}, h={h}"
+                )
+
+            class_ids_in_sample.add(cid)
+
+        # File-level image validation
+        fv = validate_absolute_path(img_path, max_size_bytes=max_image_size_bytes)
+        if not fv.ok:
+            err = SampleError(file_name=file_name, reason=fv.message, code=fv.code.value)
+            if not skip_invalid_images:
+                raise IngestionError(f"Image validation failed ({fv.code.value}): {fv.message}")
+            errors.append(err)
+            continue
+
+        try:
+            meta = load_image_metadata(
+                img_path,
+                max_size_bytes=max_image_size_bytes,
+                max_dimension=max_image_dimension,
+            )
+        except ImageLoadError as exc:
+            err = SampleError(file_name=file_name, reason=str(exc), code=exc.code.value)
+            if not skip_invalid_images:
+                raise IngestionError(f"Image load failed ({exc.code.value}): {exc}") from exc
+            errors.append(err)
+            continue
+
+        try:
+            sha256, phash_hex, dhash_hex = _compute_hashes(img_path)
+        except Exception as exc:
+            err = SampleError(file_name=file_name, reason=str(exc), code="hash_error")
+            if not skip_invalid_images:
+                raise IngestionError(f"Hash computation failed: {exc}") from exc
+            errors.append(err)
+            continue
+
+        # Resolve labels
+        labels = [
+            class_names[c] if c < len(class_names) else f"class_{c}"
+            for c in sorted(class_ids_in_sample)
+        ]
+
+        # Determine contributor
+        contributor: str | None = contributors_map.get(file_name)
+        if contributor is None:
+            try:
+                rel_parent = img_path.relative_to(yolo_dir).parent
+                if rel_parent != Path(".") and str(rel_parent) != "":
+                    contributor = rel_parent.parts[0]
+            except ValueError:
+                pass
+
+        sample = Sample(
+            dataset_id=dataset_id,
+            file_name=file_name,
+            sha256=sha256,
+            phash=phash_hex,
+            dhash=dhash_hex,
+            width=meta.width,
+            height=meta.height,
+            file_size_bytes=meta.file_size_bytes,
+            labels=labels,
+            contributor=contributor,
+        )
+        samples_batch.append(sample)
+
+        if len(samples_batch) >= _BATCH_SIZE:
+            sample_repo.insert_many(samples_batch)
+            total_ingested += len(samples_batch)
+            samples_batch = []
+
+    if samples_batch:
+        sample_repo.insert_many(samples_batch)
+        total_ingested += len(samples_batch)
+
+    dataset_repo.update_sample_count(dataset_id, total_ingested)
+    log.info(
+        "YOLO ingestion complete: %d samples ingested, %d errors, classes=%s",
+        total_ingested,
+        len(errors),
+        class_names,
+    )
+
+    return IngestionResult(
+        dataset_id=dataset_id,
+        samples_ingested=total_ingested,
+        samples_skipped=len(errors),
+        errors=errors,
+        class_names=class_names,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Dataset registration helper
 # ---------------------------------------------------------------------------
 
@@ -682,3 +1007,7 @@ class IngestionError(Exception):
 
 class CocoValidationError(Exception):
     """Raised when a COCO JSON file fails structural validation."""
+
+
+class YoloValidationError(Exception):
+    """Raised when a YOLO dataset fails structural or coordinate validation."""

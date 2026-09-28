@@ -61,10 +61,10 @@ log = logging.getLogger(__name__)
 _METADATA = DetectorMetadata(
     detector_id="data.integrity.di03_trigger_anomaly",
     version="1.0.0",
-    name="DI-03: Trigger & Pattern Anomaly Detector",
+    name="DI-03: Recurring Localized Visual-Pattern Anomaly Detector",
     description=(
         "Detects localized visual anomalies, recurring corner/edge patches, "
-        "and high-frequency trigger patterns indicative of backdoor injection."
+        "and high-frequency pattern recurrence across training samples."
     ),
     applicable_asset_types=frozenset({AssetType.DATASET.value}),
 )
@@ -247,22 +247,22 @@ class DI03TriggerAnomalyDetector:
                         category=FindingCategory.DATA_INTEGRITY,
                         subcategory="trigger_injection",
                         severity=severity,
-                        title=f"Suspicious recurring trigger pattern detected in {loc_name.replace('_', ' ')}",
+                        title=f"Suspicious recurring localized pattern (candidate trigger) detected in {loc_name.replace('_', ' ')}",
                         description=(
                             f"A localized visual pattern in the {loc_name.replace('_', ' ')} region recurs across "
                             f"{len(distinct_samples)} distinct images (variance {avg_var:.1f}). "
-                            f"Identical localized patches across differing image contents indicate potential "
-                            f"Trojan trigger or artificial watermark injection."
+                            f"Identical localized patches across differing image contents indicate a recurring visual pattern anomaly "
+                            f"(candidate localized trigger or artificial watermark)."
                         ),
                         detection_method=_METADATA.name,
                         detector_id=_METADATA.detector_id,
                         limitations=[
-                            "Detects localized spatial trigger marks (e.g. BadNets, corner patches, digital watermarks).",
-                            "Legitimate uniform UI badges or camera timestamp overlays can produce similar recurrence.",
+                            "Analysis identifies recurring localized visual patterns across samples.",
+                            "Recurring patterns alone do not prove malicious intent; legitimate camera watermarks, UI badges, or sensor artifacts can trigger recurrence.",
                         ],
                         recommended_disposition=(
-                            f"Inspect the {loc_name.replace('_', ' ')} region of flagged samples to confirm "
-                            f"whether the recurring artifact is a legitimate watermark or malicious backdoor trigger."
+                            f"Inspect the {loc_name.replace('_', ' ')} region of flagged samples to determine "
+                            f"whether the recurring artifact is an authorized watermark or unintended pattern contamination."
                         ),
                     )
                     findings.append(finding)

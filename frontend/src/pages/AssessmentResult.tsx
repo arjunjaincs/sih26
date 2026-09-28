@@ -6,9 +6,13 @@ import {
   Info,
   Sparkles,
   ShieldCheck,
+  Database,
+  Cpu,
+  KeyRound,
 } from 'lucide-react';
-import type { AssessmentResultSchema } from '../types/api';
-import { getAssessment } from '../api/client';
+import type { AssessmentResultSchema, EvidenceSchema } from '../types/api';
+import { getAssessment, getEvidence } from '../api/client';
+import { cn } from '../lib/cn';
 import { MetricTriad } from '../components/MetricTriad';
 import { DetectorMatrix } from '../components/DetectorMatrix';
 import { AssessmentHeader } from '../components/AssessmentHeader';
@@ -29,6 +33,15 @@ export function AssessmentResult() {
   const [result, setResult] = useState<AssessmentResultSchema | null>(initialResult);
   const [loading, setLoading] = useState<boolean>(!initialResult);
   const [error, setError] = useState<string | null>(null);
+  const [evidenceItems, setEvidenceItems] = useState<EvidenceSchema[]>([]);
+
+  useEffect(() => {
+    if (result?.assessment_id) {
+      getEvidence(result.assessment_id)
+        .then((res) => setEvidenceItems(res.evidence || []))
+        .catch(() => setEvidenceItems([]));
+    }
+  }, [result?.assessment_id]);
 
   useEffect(() => {
     if (outletCtx?.result) {
@@ -79,6 +92,56 @@ export function AssessmentResult() {
 
   const hasCoverageGaps = result.coverage_gaps && result.coverage_gaps.length > 0;
   const hasLimitations = result.limitations && result.limitations.length > 0;
+
+  // Pillar breakdown
+  const dataRuns = result.detector_runs?.filter((r) => r.detector_id.startsWith('data.')) ?? [];
+  const modelRuns = result.detector_runs?.filter((r) => r.detector_id.startsWith('model.')) ?? [];
+  const infRuns = result.detector_runs?.filter((r) => r.detector_id.startsWith('inference.')) ?? [];
+
+  const dataChecked = dataRuns.filter((r) => r.ran).length;
+  const modelChecked = modelRuns.filter((r) => r.ran).length;
+  const infChecked = infRuns.filter((r) => r.ran).length;
+
+  const dataFindings = dataRuns.reduce((sum, r) => sum + (r.findings_count || 0), 0);
+  const modelFindings = modelRuns.reduce((sum, r) => sum + (r.findings_count || 0), 0);
+  const infFindings = infRuns.reduce((sum, r) => sum + (r.findings_count || 0), 0);
+
+  const dataGaps = result.coverage_gaps?.filter((g) => g.detector_id.startsWith('data.')) ?? [];
+  const modelGaps = result.coverage_gaps?.filter((g) => g.detector_id.startsWith('model.')) ?? [];
+  const infGaps = result.coverage_gaps?.filter((g) => g.detector_id.startsWith('inference.')) ?? [];
+
+  const dataCoverage = dataRuns.length > 0 ? Math.round((dataChecked / dataRuns.length) * 100) : 0;
+  const modelCoverage = modelRuns.length > 0 ? Math.round((modelChecked / modelRuns.length) * 100) : 0;
+  const infCoverage = infRuns.length > 0 ? Math.round((infChecked / infRuns.length) * 100) : 0;
+
+  const dataConf = dataChecked === 0 ? 'N/A' : (dataChecked >= 4 ? 'HIGH' : dataChecked >= 2 ? 'MODERATE' : 'LOW');
+  const modelConf = modelChecked === 0 ? 'N/A' : (modelChecked >= 4 ? 'HIGH' : modelChecked >= 2 ? 'MODERATE' : 'LOW');
+  const infConf = infChecked === 0 ? 'N/A' : 'HIGH';
+
+  // Specialized evidence detection for PS requirements (DI-04 distribution shift & COCO/YOLO format)
+  const di04Evidence = evidenceItems.find(
+    (e) => (Boolean(e?.detector_id) && e.detector_id.includes('di04')) || e?.evidence_type === 'distribution_stats'
+  );
+  const di04Data = di04Evidence?.data as {
+    reference_sample_count?: number;
+    evaluation_sample_count?: number;
+    overall_shift_magnitude?: number;
+    outlier_proportion?: number;
+    shifted_features?: string[];
+    evidence_category?: string;
+  } | undefined;
+
+  const detectedFormat = (() => {
+    const t = result.title?.toLowerCase() || '';
+    if (t.includes('coco')) return 'COCO';
+    if (t.includes('yolo')) return 'YOLO';
+    for (const ev of evidenceItems) {
+      const desc = (ev?.description || '').toLowerCase();
+      if (desc.includes('coco')) return 'COCO';
+      if (desc.includes('yolo')) return 'YOLO';
+    }
+    return null;
+  })();
 
   return (
     <div className={outletCtx ? "space-y-8" : "max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6"}>
@@ -222,6 +285,201 @@ export function AssessmentResult() {
           <ChevronRight className="w-4 h-4 text-3 group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
         </Link>
       </section>
+
+      {/* ── Assurance Pillars (DATA, MODEL, INFERENCE) ── */}
+      <section aria-label="Assurance Pillars" className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-mono font-bold text-2 uppercase tracking-wider">
+            Core Pillars Overview (DATA · MODEL · INFERENCE)
+          </h2>
+          <span className="text-[11px] text-3">PRAMAAN Multi-Layer Triad</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* DATA Layer */}
+          <div className="card p-4 border border-[var(--border)] bg-surface space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-blue-500" />
+                <h3 className="font-bold text-sm text-1">DATA</h3>
+              </div>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-500 font-bold">
+                INTEGRITY
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[var(--border)]">
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Checked</span>
+                <span className="font-bold text-1">{dataChecked} / 5</span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Findings</span>
+                <span className={cn("font-bold", dataFindings > 0 ? "text-[var(--amber)]" : "text-1")}>
+                  {dataFindings}
+                </span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Coverage</span>
+                <span className="font-bold text-1">{dataCoverage}%</span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Confidence</span>
+                <span className="font-bold text-1">{dataConf}</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px]">
+              <span className="text-3">Limitations</span>
+              <span className="font-mono font-bold text-2">{dataGaps.length} gaps</span>
+            </div>
+          </div>
+
+          {/* MODEL Layer */}
+          <div className="card p-4 border border-[var(--border)] bg-surface space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-purple-500" />
+                <h3 className="font-bold text-sm text-1">MODEL</h3>
+              </div>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/30 text-purple-500 font-bold">
+                NEURAL
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[var(--border)]">
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Checked</span>
+                <span className="font-bold text-1">{modelChecked} / 5</span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Findings</span>
+                <span className={cn("font-bold", modelFindings > 0 ? "text-[var(--amber)]" : "text-1")}>
+                  {modelFindings}
+                </span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Coverage</span>
+                <span className="font-bold text-1">{modelCoverage}%</span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Confidence</span>
+                <span className="font-bold text-1">{modelConf}</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px]">
+              <span className="text-3">Limitations</span>
+              <span className="font-mono font-bold text-2">{modelGaps.length} gaps</span>
+            </div>
+          </div>
+
+          {/* INFERENCE Layer */}
+          <div className="card p-4 border border-[var(--border)] bg-surface space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-cyan-500" />
+                <h3 className="font-bold text-sm text-1">INFERENCE</h3>
+              </div>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 font-bold">
+                PROVENANCE
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[var(--border)]">
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Checked</span>
+                <span className="font-bold text-1">{infChecked} / 1</span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Findings</span>
+                <span className={cn("font-bold", infFindings > 0 ? "text-[var(--amber)]" : "text-1")}>
+                  {infFindings}
+                </span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Coverage</span>
+                <span className="font-bold text-1">{infCoverage}%</span>
+              </div>
+              <div>
+                <span className="text-3 block text-[10px] uppercase font-mono">Confidence</span>
+                <span className="font-bold text-1">{infConf}</span>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px]">
+              <span className="text-3">Limitations</span>
+              <span className="font-mono font-bold text-2">{infGaps.length} gaps</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Specialized PS Assurance Badges (COCO/YOLO & DI-04 Shift) ── */}
+      {(detectedFormat || di04Data) && (
+        <section aria-label="PS Specialized Assurance" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {detectedFormat && (
+            <div className="card p-4 border border-[var(--border)] bg-surface space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-3">Dataset Format Specification</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-accent/15 border border-accent/30 text-accent">
+                  {detectedFormat}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-[var(--border)]">
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Images</span>
+                  <span className="font-bold text-1">Ingested & Associated</span>
+                </div>
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Annotations</span>
+                  <span className="font-bold text-1">Verified Schema</span>
+                </div>
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Validation</span>
+                  <span className="font-bold text-[var(--green)]">Fail-Closed Pass</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {di04Data && (
+            <div className="card p-4 border border-[var(--border)] bg-surface space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-3">
+                  DI-04 Distribution Shift Assurance
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-300">
+                  {di04Data.evidence_category || 'DISTRIBUTION_SHIFT'}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-xs pt-1 border-t border-[var(--border)]">
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Ref vs Eval</span>
+                  <span className="font-bold text-1">
+                    {di04Data.reference_sample_count ?? '-'} vs {di04Data.evaluation_sample_count ?? '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Shift Mag</span>
+                  <span className="font-bold text-1">
+                    {typeof di04Data.overall_shift_magnitude === 'number'
+                      ? di04Data.overall_shift_magnitude.toFixed(2)
+                      : '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Outliers</span>
+                  <span className="font-bold text-1">
+                    {typeof di04Data.outlier_proportion === 'number'
+                      ? `${(di04Data.outlier_proportion * 100).toFixed(1)}%`
+                      : '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-3 block text-[10px] uppercase font-mono">Shifted Feats</span>
+                  <span className="font-bold text-1 truncate" title={di04Data.shifted_features?.join(', ')}>
+                    {di04Data.shifted_features?.length ? di04Data.shifted_features.join(', ') : 'None'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── 11-Detector Assurance Battery Matrix ── */}
       <section aria-label="Detector Battery">

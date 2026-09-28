@@ -57,7 +57,7 @@ _DETECTOR_METHOD_METADATA: dict[str, dict] = {
         "pillar": "Dataset Integrity",
         "access_requirements": "Black-Box with Labels (sample images + class annotations)",
         "dependencies": ["Pillow", "imagehash", "numpy", "sqlite3"],
-        "supported_formats": ["COCO JSON annotations", "metadata.json / labels.json", "Directory class mappings"],
+        "supported_formats": ["COCO JSON annotations", "YOLO dataset format (images/ + labels/)", "metadata.json / labels.json", "Directory class mappings"],
         "what_it_analyzes": (
             "Inspects labeled samples to detect contradictory class annotations across perceptual near-duplicates "
             "(Hamming <= 4) and statistical class centroid outliers (> 2.5 sigma) that are closer to an alternate "
@@ -85,11 +85,11 @@ _DETECTOR_METHOD_METADATA: dict[str, dict] = {
         "pillar": "Dataset Integrity",
         "access_requirements": "Black-Box (sample images)",
         "dependencies": ["Pillow", "imagehash", "numpy", "sqlite3"],
-        "supported_formats": ["JPEG", "PNG", "WEBP"],
+        "supported_formats": ["JPEG", "PNG", "WEBP", "COCO", "YOLO"],
         "what_it_analyzes": (
-            "Inspects localized image regions (four corners: top-left, top-right, bottom-left, bottom-right, "
-            "plus center) across dataset samples to identify recurring identical/near-identical localized "
-            "visual patches and artificial high-contrast spatial patterns indicative of backdoor trigger injection."
+            "Inspects localized image regions (four corners plus center) across dataset samples to identify "
+            "recurring identical/near-identical localized visual patches and artificial high-contrast spatial patterns "
+            "(candidate localized triggers or artificial watermarks)."
         ),
         "evidence_produced": [
             "EvidenceType.CLUSTER: Recurring localized patch coordinates and sample bindings",
@@ -101,47 +101,47 @@ _DETECTOR_METHOD_METADATA: dict[str, dict] = {
             "Moderate variance recurrences yield MODERATE confidence."
         ),
         "limitations": [
-            "Detects visible localized spatial triggers (patches/watermarks).",
+            "Detects visible localized spatial trigger patterns (patches/watermarks).",
             "Does not detect full-canvas, invisible, or blended adversarial perturbations without localized footprints.",
             "Operates purely offline without model training.",
         ],
-        "reference_method": "BadNets (Gu et al., 2017) localized spatial trigger threat model",
+        "reference_method": "Recurring localized visual-pattern anomaly analysis (adapted from Gu et al. localized trigger threat model)",
     },
     "data.integrity.di04_ood_distribution": {
         "code": "DI-04",
         "pillar": "Dataset Integrity",
         "access_requirements": "Black-Box (sample images)",
         "dependencies": ["Pillow", "numpy", "sqlite3"],
-        "supported_formats": ["JPEG", "PNG", "WEBP"],
+        "supported_formats": ["JPEG", "PNG", "WEBP", "COCO", "YOLO"],
         "what_it_analyzes": (
             "Extracts 6D multivariate feature vectors (aspect ratio, normalized byte density, RGB channel "
-            "means, luminance variance, spectral texture) and computes standardized multivariate distance "
-            "(median / IQR z-scores) against the dataset baseline to detect samples significantly outside the "
-            "dominant distribution."
+            "means, luminance variance) and performs robust statistical distribution-outlier analysis and "
+            "cross-distribution shift analysis (Reference vs Evaluation) using standardized median/IQR distance."
         ),
         "evidence_produced": [
             "EvidenceType.CLUSTER: Standardized multivariate distance scores (median/IQR)",
-            "Per-dimension outlier score breakdown across geometry, color, and texture",
+            "Per-dimension outlier score breakdown across geometry and photometry",
+            "Cross-distribution shift magnitude and proportion of samples outside reference bounds",
             "Identified anomalous sample paths and dimensional deviation",
             "Baseline distribution parameter estimates",
         ],
         "confidence_semantics": (
-            "Severe multi-dimensional outliers (> 4.0 IQR) yield HIGH confidence of distribution deviation. "
+            "Severe multi-dimensional outliers (> 4.0 IQR) or clear shift against reference yield HIGH confidence. "
             "Single-dimension deviations yield MODERATE confidence."
         ),
         "limitations": [
             "Evaluates low-level photometric and geometric distributions; does not perform high-level semantic OOD classification.",
             "Requires a baseline of at least 5 samples in the dataset.",
-            "Benign anomalies (unusual lighting, framing) may be flagged as outliers.",
+            "Benign anomalies (unusual lighting, framing) may be flagged as outliers or operational drift.",
         ],
-        "reference_method": "Robust Multivariate Median Absolute Deviation (MAD / IQR outlier detection)",
+        "reference_method": "Robust statistical distribution-outlier analysis via multivariate median/IQR standardized distances",
     },
     "data.integrity.di05_contributor_risk": {
         "code": "DI-05",
         "pillar": "Dataset Integrity",
         "access_requirements": "Black-Box with Attribution (sample metadata, user_id, or source directories)",
         "dependencies": ["sqlite3"],
-        "supported_formats": ["COCO user/contributor fields", "Directory-based source grouping", "metadata.json attribution"],
+        "supported_formats": ["COCO user/contributor fields", "YOLO metadata / directory attribution", "Directory-based source grouping", "metadata.json attribution"],
         "what_it_analyzes": (
             "Aggregates findings from all data integrity detectors (DI-01 through DI-04) by contributor "
             "or source group to compute per-contributor defect rates and identify sources with disproportionately "
@@ -283,7 +283,7 @@ _DETECTOR_METHOD_METADATA: dict[str, dict] = {
             "Evaluates model sensitivity to localized spatial trigger perturbations across diverse clean probe inputs. "
             "Tests candidate localized perturbations (top-left patch, bottom-right patch, center mark, uniform bias control) "
             "and calculates output shift and Target Mode Convergence Ratio (CR = PairwiseDiversity(perturbed) / PairwiseDiversity(clean)) "
-            "to detect Trojan backdoor shortcuts."
+            "to detect trigger-like behavioral convergence."
         ),
         "evidence_produced": [
             "Candidate perturbation evaluations (shift magnitude, output diversity)",
@@ -293,13 +293,13 @@ _DETECTOR_METHOD_METADATA: dict[str, dict] = {
         ],
         "confidence_semantics": (
             "Convergence ratio CR < 0.15 with elevated output shift yields HIGH risk and HIGH confidence of "
-            "Trojan shortcut behavior. Normal smooth perturbation responses yield NONE risk with HIGH confidence."
+            "trigger-like behavioral convergence. Normal smooth perturbation responses yield NONE risk with HIGH confidence."
         ),
         "limitations": [
             "Tests concrete candidate localized spatial patch hypotheses.",
             "Does NOT guarantee detection of complex blended, invisible, or semantic triggers without access to the original training distribution.",
         ],
-        "reference_method": "Neural Cleanse (Wang et al., 2019) target convergence principles adapted for deterministic offline probe evaluation",
+        "reference_method": "Neural Cleanse (Wang et al., 2019) target convergence principles adapted for deterministic offline probe evaluation without gradient access",
     },
     "inference.provenance.pi01_integrity": {
         "code": "PI-01",
@@ -326,7 +326,7 @@ _DETECTOR_METHOD_METADATA: dict[str, dict] = {
             "Validates post-training inference transmission and execution binding.",
             "Does not authenticate the training pipeline if the manifest was signed dishonestly by an authorized key holder.",
         ],
-        "reference_method": "RFC 8032 (Ed25519 Edwards-curve Digital Signature Algorithm); ADR-003",
+        "reference_method": "Ed25519-signed cryptographic provenance verification (RFC 8032; ADR-003)",
     },
 }
 

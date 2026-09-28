@@ -97,6 +97,7 @@ from backend.infra.ingestion import (
     IngestionResult,
     ingest_coco_dataset,
     ingest_image_directory,
+    ingest_yolo_dataset,
     register_dataset,
 )
 
@@ -215,6 +216,7 @@ class AssessmentService:
         # ----------------------------------------------------------------
         asset_ids: list[str] = []
         dataset_asset_id: str | None = None
+        reference_dataset_asset_id: str | None = None
         model_asset_id: str | None = None
         inference_bundle_asset_id: str | None = None
 
@@ -230,6 +232,19 @@ class AssessmentService:
                     assess_id, AssessmentState.FAILED, error=err
                 )
                 return self._failed_result(request, started_at, f"Dataset ingestion failed: {err}")
+
+        # --- Reference Dataset ingestion (for cross-distribution shift analysis) ---
+        if request.dataset_reference_path is not None:
+            try:
+                reference_dataset_asset_id = self._ingest_reference_dataset(request, assess_id)
+                asset_ids.append(reference_dataset_asset_id)
+            except Exception as exc:
+                log.exception("Reference dataset ingestion failed")
+                err = str(exc)
+                self._assessment_repo.update_state(
+                    assess_id, AssessmentState.FAILED, error=err
+                )
+                return self._failed_result(request, started_at, f"Reference dataset ingestion failed: {err}")
 
         # --- Model asset registration ---
         if request.model_path is not None:
@@ -266,6 +281,7 @@ class AssessmentService:
             request=request,
             assess_id=assess_id,
             dataset_asset_id=dataset_asset_id,
+            reference_dataset_asset_id=reference_dataset_asset_id,
             model_asset_id=model_asset_id,
             inference_bundle_asset_id=inference_bundle_asset_id,
         )
@@ -437,10 +453,27 @@ class AssessmentService:
                 skip_invalid_images=False,
             )
         elif fmt == DatasetFormat.COCO_JSON:
-            # For COCO_JSON: path is the JSON file; images_dir is its parent
+            coco_json_path = path
+            images_dir = path.parent
+            if path.is_dir():
+                candidates = list(path.glob("*.json"))
+                if not candidates:
+                    raise ValueError(f"No COCO JSON file found in directory: {path}")
+                coco_json_path = candidates[0]
+                images_dir = (path / "images") if (path / "images").is_dir() else path
+            elif (path.parent / "images").is_dir():
+                images_dir = path.parent / "images"
+
             result = ingest_coco_dataset(
-                coco_json_path=path,
-                images_dir=path.parent,
+                coco_json_path=coco_json_path,
+                images_dir=images_dir,
+                dataset_id=dataset_id,
+                conn=self._conn,
+                skip_invalid_images=False,
+            )
+        elif fmt == DatasetFormat.YOLO:
+            result = ingest_yolo_dataset(
+                yolo_dir=path,
                 dataset_id=dataset_id,
                 conn=self._conn,
                 skip_invalid_images=False,
@@ -468,6 +501,75 @@ class AssessmentService:
 
         return dataset_id
 
+    def _ingest_reference_dataset(
+        self,
+        request: AssessmentRequest,
+        assess_id: str,
+    ) -> str:
+        """Register and ingest a reference baseline dataset for cross-distribution comparison."""
+        path = request.dataset_reference_path
+        fmt = request.dataset_reference_format or request.dataset_format or DatasetFormat.IMAGE_DIR
+        name = f"ref_{path.name if hasattr(path, 'name') else str(path)}"
+
+        asset, dataset = register_dataset(
+            assessment_id=assess_id,
+            name=name,
+            source_path=path,
+            fmt=fmt,
+            conn=self._conn,
+        )
+        dataset_id = dataset.dataset_id
+
+        if fmt == DatasetFormat.IMAGE_DIR:
+            result = ingest_image_directory(
+                directory=path,
+                dataset_id=dataset_id,
+                conn=self._conn,
+                skip_invalid_images=False,
+            )
+        elif fmt == DatasetFormat.COCO_JSON:
+            coco_json_path = path
+            images_dir = path.parent
+            if path.is_dir():
+                candidates = list(path.glob("*.json"))
+                if not candidates:
+                    raise ValueError(f"No COCO JSON file found in directory: {path}")
+                coco_json_path = candidates[0]
+                images_dir = (path / "images") if (path / "images").is_dir() else path
+            elif (path.parent / "images").is_dir():
+                images_dir = path.parent / "images"
+
+            result = ingest_coco_dataset(
+                coco_json_path=coco_json_path,
+                images_dir=images_dir,
+                dataset_id=dataset_id,
+                conn=self._conn,
+                skip_invalid_images=False,
+            )
+        elif fmt == DatasetFormat.YOLO:
+            result = ingest_yolo_dataset(
+                yolo_dir=path,
+                dataset_id=dataset_id,
+                conn=self._conn,
+                skip_invalid_images=False,
+            )
+        else:
+            raise ValueError(f"Unsupported dataset format: {fmt!r}")
+
+        try:
+            self._audit_svc.record_asset_registered(
+                assessment_id=assess_id,
+                asset_id=dataset_id,
+                asset_type=AssetType.DATASET.value,
+                name=name,
+                sha256=asset.sha256,
+                size_bytes=result.samples_ingested,
+            )
+        except Exception as exc:
+            log.warning("Failed to emit reference dataset audit event: %s", exc)
+
+        return dataset_id
+
     def _register_model(
         self,
         request: AssessmentRequest,
@@ -489,6 +591,14 @@ class AssessmentService:
         }
         framework = framework_map.get(suffix, ModelFramework.UNKNOWN)
 
+        # Determine access level
+        if suffix in (".onnx", ".ts", ".torchscript"):
+            access_level = AccessLevel.WHITE_BOX
+        elif suffix in (".pt", ".pth"):
+            access_level = AccessLevel.METADATA_ONLY
+        else:
+            access_level = AccessLevel.METADATA_ONLY
+
         asset = Asset(
             asset_id=asset_id,
             assessment_id=assess_id,
@@ -501,7 +611,7 @@ class AssessmentService:
             model_id=asset_id,
             assessment_id=assess_id,
             framework=framework,
-            access_level=AccessLevel.WHITE_BOX,
+            access_level=access_level,
             source_path=str(model_path),
         )
 
@@ -568,8 +678,9 @@ class AssessmentService:
         request: AssessmentRequest,
         assess_id: str,
         dataset_asset_id: str | None,
-        model_asset_id: str | None,
-        inference_bundle_asset_id: str | None,
+        reference_dataset_asset_id: str | None = None,
+        model_asset_id: str | None = None,
+        inference_bundle_asset_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Determine which detectors are applicable and build execution plans.
@@ -587,6 +698,10 @@ class AssessmentService:
         plans: list[dict[str, Any]] = []
 
         # --- DI-01..DI-05: dataset integrity suite ---
+        di04_extras: dict[str, Any] = {}
+        if reference_dataset_asset_id is not None:
+            di04_extras["reference_asset_id"] = reference_dataset_asset_id
+
         dataset_detectors = [
             (
                 DI01DuplicateDetector(),
@@ -597,7 +712,7 @@ class AssessmentService:
             ),
             (DI02LabelIntegrityDetector(), {}),
             (DI03TriggerAnomalyDetector(), {}),
-            (DI04DistributionOODDetector(), {}),
+            (DI04DistributionOODDetector(), di04_extras),
             (DI05ContributorRiskDetector(), {}),
         ]
         for det, extras in dataset_detectors:

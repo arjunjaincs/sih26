@@ -393,7 +393,8 @@ class PDFReportGenerator:
         else:
             for a in self.data.assets:
                 size_str = f"{a.size_bytes / 1024:.1f} KB" if a.size_bytes > 0 else "N/A"
-                fmt_str = f"{a.format or a.asset_type.upper()} ({size_str})"
+                access_str = f" [{a.details['access_level'].upper()}]" if (a.details and "access_level" in a.details) else ""
+                fmt_str = f"{a.format or a.asset_type.upper()}{access_str} ({size_str})"
                 sha_trunc = f"{a.sha256[:16]}...{a.sha256[-8:]}" if len(a.sha256) > 24 else a.sha256
                 asset_rows.append([
                     Paragraph(safe_escape(a.asset_id[:8]), self.styles["TableCellCode"]),

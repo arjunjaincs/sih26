@@ -52,17 +52,17 @@ BATTERY_DETECTORS = [
     # Data Integrity
     ("data.integrity.di01_duplicates", "DI-01: Near & Exact Duplicates", "DATA_INTEGRITY"),
     ("data.integrity.di02_label_integrity", "DI-02: Systematic Mislabelling", "DATA_INTEGRITY"),
-    ("data.integrity.di03_trigger_anomaly", "DI-03: Spatial Pattern Anomalies", "DATA_INTEGRITY"),
-    ("data.integrity.di04_distribution_ood", "DI-04: Distribution Shift & OOD", "DATA_INTEGRITY"),
-    ("data.integrity.di05_contributor_risk", "DI-05: Contributor Anomaly Risk", "DATA_INTEGRITY"),
+    ("data.integrity.di03_trigger_anomaly", "DI-03: Recurring Localized Visual-Pattern Anomalies", "DATA_INTEGRITY"),
+    ("data.integrity.di04_ood_distribution", "DI-04: Robust Statistical Distribution Outliers & Shift", "DATA_INTEGRITY"),
+    ("data.integrity.di05_contributor_risk", "DI-05: Contributor Anomaly Concentration", "DATA_INTEGRITY"),
     # Model Integrity
     ("model.integrity.mi01_fingerprint", "MI-01: Cryptographic Fingerprint", "MODEL_INTEGRITY"),
     ("model.integrity.mi02_parameter_stats", "MI-02: Parameter Numerical Stats", "MODEL_INTEGRITY"),
     ("model.integrity.mi03_activation_stats", "MI-03: Layer Activation Profiles", "MODEL_INTEGRITY"),
     ("model.integrity.mi04_reference_comparison", "MI-04: Reference Differential", "MODEL_INTEGRITY"),
-    ("model.integrity.mi05_trigger_anomaly", "MI-05: Adversarial Trigger Search", "MODEL_INTEGRITY"),
+    ("model.integrity.mi05_trigger_anomaly", "MI-05: Suspicious Trigger-Like Behavioral Convergence", "MODEL_INTEGRITY"),
     # Inference / Provenance
-    ("inference.provenance.pi01_integrity", "PI-01: Provenance & Output Integrity", "INFERENCE_PROVENANCE"),
+    ("inference.provenance.pi01_integrity", "PI-01: Cryptographic Provenance Integrity", "INFERENCE_PROVENANCE"),
 ]
 
 

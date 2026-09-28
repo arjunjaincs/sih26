@@ -122,7 +122,7 @@ class AssessmentCreateRequest(BaseModel):
     # Dataset
     dataset_path: str | None = Field(
         default=None,
-        description="Absolute path to image directory or COCO JSON file",
+        description="Absolute path to image directory, COCO JSON file, or YOLO directory",
     )
     dataset_asset_id: str | None = Field(
         default=None,
@@ -130,7 +130,19 @@ class AssessmentCreateRequest(BaseModel):
     )
     dataset_format: str | None = Field(
         default=None,
-        description="'image_dir' or 'coco_json'",
+        description="'image_dir', 'coco_json', or 'yolo'",
+    )
+    dataset_reference_path: str | None = Field(
+        default=None,
+        description="Optional absolute path to baseline reference dataset for DI-04 shift analysis",
+    )
+    dataset_reference_asset_id: str | None = Field(
+        default=None,
+        description="Asset identifier for reference dataset",
+    )
+    dataset_reference_format: str | None = Field(
+        default=None,
+        description="Format of reference dataset ('image_dir', 'coco_json', or 'yolo')",
     )
 
     # Model

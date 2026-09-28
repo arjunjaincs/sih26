@@ -91,6 +91,9 @@ class DetectorContext:
     # Minimum cluster size that generates a Finding (singletons are noise)
     min_cluster_size: int = 2
 
+    # Reference asset (e.g. baseline dataset for DI-04 distribution shift)
+    reference_asset_id: str | None = None
+
 
 # ---------------------------------------------------------------------------
 # Detector output

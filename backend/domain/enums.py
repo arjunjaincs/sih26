@@ -39,6 +39,7 @@ class DatasetFormat(str, Enum):
 
     IMAGE_DIR = "image_dir"  # Plain directory of images, no annotations
     COCO_JSON = "coco_json"  # COCO format with a JSON annotation file
+    YOLO = "yolo"            # YOLO format with images/ and labels/ directories
 
 
 class ModelFramework(str, Enum):
@@ -52,16 +53,20 @@ class ModelFramework(str, Enum):
 
 class AccessLevel(str, Enum):
     """
-    What level of internal access PRAMAAN has to a model.
+    What level of internal access PRAMAAN has to an asset or model.
 
-    BLACK_BOX  — only input/output access (query model, observe predictions)
-    GRAY_BOX   — limited internals (e.g., some activation hooks)
-    WHITE_BOX  — full access (weights, gradients, architecture)
+    BLACK_BOX      — input/output access (query model/images, observe predictions)
+    GRAY_BOX       — limited internals (e.g., some activation hooks)
+    WHITE_BOX      — full access (weights, graph, gradients, architecture)
+    METADATA_ONLY  — non-executable inspection (state dict weights or header-only)
+    UNAVAILABLE    — cannot be analyzed under current access mode
     """
 
     BLACK_BOX = "black_box"
     GRAY_BOX = "gray_box"
     WHITE_BOX = "white_box"
+    METADATA_ONLY = "metadata_only"
+    UNAVAILABLE = "unavailable"
 
 
 class RiskLevel(str, Enum):

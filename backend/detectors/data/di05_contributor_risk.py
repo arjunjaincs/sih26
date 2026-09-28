@@ -55,10 +55,10 @@ log = logging.getLogger(__name__)
 _METADATA = DetectorMetadata(
     detector_id="data.integrity.di05_contributor_risk",
     version="1.0.0",
-    name="DI-05: Contributor & Source Risk Aggregation",
+    name="DI-05: Contributor/Source Anomaly Concentration Analysis",
     description=(
         "Aggregates sample-level defect and anomaly findings by contributor or source "
-        "origin to identify concentrated multi-contributor risk."
+        "origin to identify statistical anomaly concentration across sources."
     ),
     applicable_asset_types=frozenset({AssetType.DATASET.value}),
 )

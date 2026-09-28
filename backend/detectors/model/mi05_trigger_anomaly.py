@@ -65,11 +65,11 @@ log = logging.getLogger(__name__)
 _METADATA = DetectorMetadata(
     detector_id="model.integrity.mi05_trigger_anomaly",
     version="1.0.0",
-    name="MI-05: Model Trigger & Behavioral Perturbation Search",
+    name="MI-05: Suspicious Trigger-Like Behavioral Convergence Detector",
     description=(
         "Applies a bounded battery of localized candidate spatial patches and pattern "
-        "perturbations across diverse inputs to detect Trojan-like target output convergence "
-        "or abnormal trigger sensitivity."
+        "perturbations across diverse inputs to detect suspicious trigger-like behavioral convergence "
+        "or abnormal output mode collapse."
     ),
     applicable_asset_types=frozenset({AssetType.MODEL.value}),
 )
@@ -368,17 +368,17 @@ class MI05TriggerAnomalyDetector:
                 category=FindingCategory.MODEL_INTEGRITY,
                 subcategory="suspicious_trigger_convergence",
                 severity=Severity.HIGH,
-                title=f"Suspicious trigger sensitivity detected ({', '.join(p_names)})",
+                title=f"Suspicious trigger-like behavioral convergence detected ({', '.join(p_names)})",
                 description=(
                     f"Candidate perturbation patterns [{', '.join(p_names)}] cause diverse input probes "
                     f"to collapse towards an invariant target output mode (convergence ratio < 15% of clean diversity). "
-                    f"This abnormal output invariance is characteristic of Trojan shortcut / backdoor insertion."
+                    f"This abnormal output invariance is characteristic of trigger-like behavioral convergence."
                 ),
                 detection_method=_METADATA.name,
                 detector_id=did,
                 limitations=[
                     "Tested against candidate localized spatial patches (corner checkerboard, center mark).",
-                    "Does not establish origin or malicious intent; analyst inspection required.",
+                    "Does not establish origin or prove malicious intent; analyst manual inspection required.",
                 ],
                 recommended_disposition="Quarantine artifact. Conduct targeted activation attribution on candidate trigger coordinates.",
             )
